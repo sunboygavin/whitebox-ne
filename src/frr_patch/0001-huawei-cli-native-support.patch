@@ -1,0 +1,41 @@
+--- a/lib/command.c
++++ b/lib/command.c
+@@ -113,6 +113,12 @@
+   {
+     .name = "configure terminal",
+     .func = cmd_configure_terminal,
++  },
++  {
++    .name = "system-view",
++    .func = cmd_configure_terminal,
++    .alias = "configure terminal",
++    .help = "Enter configuration mode (Huawei VRP style)",
+   },
+   {
+     .name = "configure",
+@@ -136,6 +142,12 @@
+   {
+     .name = "show",
+     .func = cmd_show,
++  },
++  {
++    .name = "display",
++    .func = cmd_show,
++    .alias = "show",
++    .help = "Show running system information (Huawei VRP style)",
+   },
+   {
+     .name = "terminal",
+@@ -159,6 +171,12 @@
+   {
+     .name = "write",
+     .func = cmd_write,
++  },
++  {
++    .name = "save",
++    .func = cmd_write,
++    .alias = "write",
++    .help = "Write running configuration to startup configuration (Huawei VRP style)",
+   },
+   {
+     .name = "exit",
