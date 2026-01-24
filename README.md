@@ -6,7 +6,7 @@
 
 | 功能模块 | 核心组件 | 协议支持 | 接口类型 | 备注 |
 | :--- | :--- | :--- | :--- | :--- |
-| **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 |
+| **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 (已集成华为风格别名) |
 | **管理接口** | Net-SNMP | SNMPv2c/v3 | SNMP AgentX | 通过 AgentX 扩展 FRR MIB |
 | **配置接口** | Sysrepo/Netopeer2 | Netconf/YANG | SSH (Netconf) | 需手动编译安装，详见 `netconf_guide.md` |
 | **转发面** | Linux Kernel | IPv4/IPv6 | - | 依赖 Linux 内核转发能力 |
@@ -125,3 +125,15 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 ## 6. 测试报告
 
 详细的沙盒环境测试报告请参阅 `TEST_REPORT.md`。
+
+### 3.1.1. 华为风格 CLI 使用
+
+安装脚本会自动将 `huawei_cli_alias.conf` 中的别名配置加载到 `vtysh` 中。您现在可以使用常用的华为风格命令：
+
+| 华为命令 (VRP) | 对应 FRR 命令 | 示例 |
+| :--- | :--- | :--- |
+| `system-view` | `configure terminal` | `system-view` |
+| `display ip routing-table` | `show ip route` | `display ip routing-table` |
+| `display interface` | `show interface` | `display interface eth0` |
+| `display bgp peer` | `show ip bgp summary` | `display bgp peer` |
+| `save` | `write` | `save` |

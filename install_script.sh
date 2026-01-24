@@ -40,7 +40,15 @@ if ! grep -q "master agentx" /etc/snmp/snmpd.conf; then
     echo "master agentx" | sudo tee -a /etc/snmp/snmpd.conf
 fi
 
-echo "--- 5. 启动服务 ---"
+echo "--- 5. 配置华为风格 CLI 别名 ---"
+# 自动将华为风格的别名配置添加到 vtysh.conf
+sudo cp /home/ubuntu/whitebox-ne-project/huawei_cli_alias.conf /etc/frr/huawei_cli_alias.conf
+sudo chown frr:frr /etc/frr/huawei_cli_alias.conf
+if ! grep -q "include /etc/frr/huawei_cli_alias.conf" /etc/frr/vtysh.conf; then
+    echo "include /etc/frr/huawei_cli_alias.conf" | sudo tee -a /etc/frr/vtysh.conf
+fi
+
+echo "--- 6. 启动服务 ---"
 # 启动 SNMP 服务
 sudo systemctl restart snmpd
 
