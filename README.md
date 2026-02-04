@@ -6,7 +6,7 @@
 
 | 功能模块 | 核心组件 | 协议支持 | 接口类型 | 备注 |
 | :--- | :--- | :--- | :--- | :--- |
-| **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 (已集成华为风格别名) |
+| **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 (已原生支持华为风格 CLI) |
 | **管理接口** | Net-SNMP | SNMPv2c/v3 | SNMP AgentX | 通过 AgentX 扩展 FRR MIB |
 | **配置接口** | Sysrepo/Netopeer2 | Netconf/YANG | SSH (Netconf) | 需手动编译安装，详见 `netconf_guide.md` |
 | **转发面** | Linux Kernel | IPv4/IPv6 | - | 依赖 Linux 内核转发能力 |
@@ -17,30 +17,56 @@
 *   **硬件**: 至少 2 vCPU，4GB RAM。
 *   **网络**: 至少两个网络接口（例如 `eth0`, `eth1`）用于模拟路由器端口。
 
-## 2. 快速安装
+## 2. 安装指南
 
-使用项目根目录下的 `install_script.sh` 脚本可以一键安装 FRR 和 SNMP 基础组件。
+本项目提供两种安装方式，您可以根据需求选择：
 
-### 2.1. 执行安装脚本
+### 2.1. 快速安装 (推荐用于快速测试和非源码定制)
 
-```bash
-# 切换到项目目录
-cd /path/to/whitebox-ne-project
+此方式使用系统软件包管理器安装预编译的 FRR 和 SNMP 组件，并进行基础配置。**如果您不需要对 FRR 源码进行修改，推荐使用此方式。**
 
-# 赋予执行权限并运行
-sudo chmod +x install_script.sh
-sudo ./install_script.sh
-```
+1.  **执行安装脚本**：
+    ```bash
+    # 切换到项目目录
+    cd /path/to/whitebox-ne-project
 
-**`install_script.sh` 执行内容：**
-1.  更新系统软件包列表。
-2.  安装 `frr`, `frr-snmp`, `snmp`, `snmpd` 等核心软件包。
-3.  修改 `/etc/frr/daemons` 文件，启用 `zebra`, `bgpd`, `ospfd`, `vrrpd` 守护进程。
-4.  修改 `/etc/frr/daemons` 文件，为 `zebra`, `bgpd`, `ospfd` 启用 SNMP 模块加载。
-5.  配置 `/etc/snmp/snmpd.conf` 启用 `master agentx`。
-6.  重启 `frr` 和 `snmpd` 服务。
+    # 赋予执行权限并运行
+    sudo chmod +x install_script.sh
+    sudo ./install_script.sh
+    ```
 
-### 2.2. 应用 FRR 配置文件
+2.  **`install_script.sh` 执行内容**：
+    *   更新系统软件包列表。
+    *   安装 `frr`, `frr-snmp`, `snmp`, `snmpd` 等核心软件包。
+    *   修改 `/etc/frr/daemons` 文件，启用 `zebra`, `bgpd`, `ospfd`, `vrrpd` 守护进程。
+    *   修改 `/etc/frr/daemons` 文件，为 `zebra`, `bgpd`, `ospfd` 启用 SNMP 模块加载。
+    *   配置 `/etc/snmp/snmpd.conf` 启用 `master agentx`。
+    *   重启 `frr` 和 `snmpd` 服务。
+
+### 2.2. 从源码构建 (推荐用于源码定制和深度开发)
+
+此方式将从 FRR 官方源码构建，并应用本项目提供的华为风格 CLI 补丁和自定义 SNMP 子代理。**如果您需要对 FRR 源码进行修改，或者希望使用自定义的 SNMP 子代理，请使用此方式。**
+
+1.  **执行源码构建脚本**：
+    ```bash
+    # 切换到项目目录
+    cd /path/to/whitebox-ne-project
+
+    # 赋予执行权限并运行
+    sudo chmod +x build_from_source.sh
+    sudo ./build_from_source.sh
+    ```
+
+2.  **`build_from_source.sh` 执行内容**：
+    *   安装编译 FRR 所需的所有依赖。
+    *   下载 FRR 官方源码 (v8.1)。
+    *   应用 `src/frr_patch/0001-huawei-cli-native-support.patch` 补丁，实现华为风格 CLI 的原生支持。
+    *   编译并安装 FRR。
+    *   编译 `src/snmp_subagent/custom_subagent`。
+
+**更多源码开发细节，请参阅 `DEVELOPMENT.md`。**
+
+### 2.3. 应用 FRR 配置文件
 
 安装完成后，需要应用路由配置。
 
@@ -125,15 +151,3 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 ## 6. 测试报告
 
 详细的沙盒环境测试报告请参阅 `TEST_REPORT.md`。
-
-### 3.1.1. 华为风格 CLI 使用
-
-安装脚本会自动将 `huawei_cli_alias.conf` 中的别名配置加载到 `vtysh` 中。您现在可以使用常用的华为风格命令：
-
-| 华为命令 (VRP) | 对应 FRR 命令 | 示例 |
-| :--- | :--- | :--- |
-| `system-view` | `configure terminal` | `system-view` |
-| `display ip routing-table` | `show ip route` | `display ip routing-table` |
-| `display interface` | `show interface` | `display interface eth0` |
-| `display bgp peer` | `show ip bgp summary` | `display bgp peer` |
-| `save` | `write` | `save` |
