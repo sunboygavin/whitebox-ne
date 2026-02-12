@@ -1,0 +1,33 @@
+# Git ignore 文件 - 白盒网元项目
+
+# Docker 镜像文件（太大，不适合提交到 git）
+*.tar
+*.tar.gz
+*.zip
+
+# Docker 相关
+*.log
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+
+# 编译产物
+*.o
+*.so
+*.a
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode/
+.idea/
+*.iml
+
+# 日志文件
+logs/
+*.log

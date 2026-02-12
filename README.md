@@ -2,6 +2,38 @@
 
 这是一个纯命令行的白盒网元实施方案，基于 **FRRouting (FRR)** 协议栈构建，旨在提供高性能、标准化的路由和管理功能。本项目不仅提供了可直接部署的配置和脚本，更包含了**可修改的 FRR 核心 C 语言源代码**，以及详尽的修改逻辑和开发指南，助您实现深度定制。
 
+## 🚀 快速开始
+
+### 方式一：Docker 部署（推荐）
+
+```bash
+# 1. 构建镜像
+./build-docker.sh
+
+# 2. 运行容器
+./run-docker.sh
+
+# 3. 进入 FRR 命令行
+docker exec -it whitebox-ne-router vtysh
+```
+
+### 方式二：直接安装
+
+```bash
+# 1. 执行安装脚本
+sudo ./install_script.sh
+
+# 2. 应用配置
+sudo cp frr.conf /etc/frr/frr.conf
+sudo chown frr:frr /etc/frr/frr.conf
+sudo systemctl restart frr
+
+# 3. 进入命令行
+sudo vtysh
+```
+
+---
+
 ## 核心功能概览
 
 | 功能模块 | 核心组件 | 协议支持 | 接口类型 | 备注 |
@@ -11,20 +43,29 @@
 | **配置接口** | Sysrepo/Netopeer2 | Netconf/YANG | SSH (Netconf) | 需手动编译安装，详见 `netconf_guide.md` |
 | **转发面** | Linux Kernel | IPv4/IPv6 | - | 依赖 Linux 内核转发能力 |
 
-## 1. 项目代码结构
+---
+
+## 📁 项目代码结构
 
 ```
 whitebox-ne/
 ├── README.md                       # 本文档：项目总览、安装、使用、开发与测试指南
+├── DOCKER_DEPLOYMENT.md            # Docker 部署详细指南
 ├── install_script.sh               # 基础组件（FRR, SNMP）一键安装脚本
 ├── build_from_source.sh            # 从源码构建 FRR 和自定义子代理的脚本
+├── build-docker.sh                 # Docker 镜像构建脚本
+├── run-docker.sh                   # Docker 容器运行脚本
+├── Dockerfile                      # Docker 镜像定义文件
+├── docker-compose.yml              # Docker Compose 编排文件
+├── docker-entrypoint.sh            # Docker 容器启动脚本
 ├── frr.conf                        # FRR 核心路由配置模板
+├── frr.docker.conf                 # Docker 版本的 FRR 配置
 ├── snmpd.conf                      # Net-SNMP 配置模板
 ├── netconf_guide.md                # Netconf/YANG 集成与编译指南
 └── src/
     ├── frr_core/                   # 经过改造的 FRR 核心源码目录
     │   ├── lib/                    # 存放 FRR 的 lib 库源码
-    │   │   └── command.c           # 华为风格 CLI 原生支持的 command.c 示例
+    │   │   └── command.c                     # 华为风格 CLI 原生支持的 command.c 示例
     │   ├── zebra/                  # 存放 FRR Zebra 守护进程源码
     │   │   └── srv6.c              # SRv6 核心处理逻辑源码示例
     │   └── bgpd/                   # 存放 FRR BGP 守护进程源码
@@ -37,26 +78,44 @@ whitebox-ne/
 ```
 
 ### 目录与文件说明：
-*   **`README.md`**: 您正在阅读的这份文档，是项目的核心入口，包含了所有安装、使用、开发和测试的详细信息。
-*   **`install_script.sh`**: 用于在 Ubuntu 22.04 上快速安装 FRR 和 Net-SNMP 软件包，并进行基础配置。此脚本适用于快速部署和测试，不涉及 FRR 源码编译。
-*   **`build_from_source.sh`**: 这是一个更高级的安装脚本，用于从 FRR 官方源码下载、应用自定义补丁、编译并安装 FRR。如果您需要应用源码级别的修改，应使用此脚本。
-*   **`frr.conf`**: FRR 路由器的核心配置文件模板，包含了 OSPF、BGP (SRv6, Flowspec)、VRRP 等协议的基本配置。
-*   **`snmpd.conf`**: Net-SNMP 代理的配置文件模板，配置了 AgentX 以允许 FRR 和自定义子代理注册 MIB。
-*   **`netconf_guide.md`**: 提供了关于如何集成 Netconf/YANG 的详细指南，包括 Sysrepo 和 Netopeer2 的编译安装步骤。
-*   **`src/frr_core/`**: **此目录存放了经过我们改造的 FRR 核心源码示例。与 `frr_patch` 不同，这里是直接修改后的 C 语言文件，方便您直接查看和修改。**
-*   **`src/frr_patch/`**: 存放对 FRR 源码进行修改的补丁文件。这些补丁是作为 `src/frr_core` 目录中代码修改的参考，如果您选择从 FRR 官方源码开始，可以应用这些补丁。
-*   **`src/snmp_subagent/`**: 存放自定义 SNMP 子代理的源码。您可以在此处添加自己的 MIB 扩展。
 
-## 2. 环境要求
+**安装与部署文件:**
+- **`README.md`**: 您正在阅读的这份文档，是项目的核心入口，包含了所有安装、使用、开发和测试的详细信息。
+- **`DOCKER_DEPLOYMENT.md`**: Docker 部署的详细指南，包括网络拓扑示例和故障排除。
+- **`install_script.sh`**: 用于在 Ubuntu 22.04 上快速安装 FRR 和 Net-SNMP 软件包，并进行基础配置。此脚本适用于快速部署和测试，不涉及 FRR 源码编译。
+- **`build_from_source.sh`**: 这是一个更高级的安装脚本，用于从 FRR 官方源码下载、应用自定义补丁、编译并安装 FRR。如果您需要应用源码级别的修改，应使用此脚本。
+- **`Dockerfile`**: Docker 镜像定义文件，用于构建容器化的白盒网元。
+- **`docker-compose.yml`**: Docker Compose 编排文件，支持单机或多网元部署。
+- **`build-docker.sh`**: Docker 镜像构建脚本，简化构建流程。
+- **`run-docker.sh`**: Docker 容器运行脚本，自动化容器创建和启动。
+- **`docker-entrypoint.sh`**: Docker 容器启动脚本，负责服务初始化和健康检查。
+
+**配置文件:**
+- **`frr.conf`**: FRR 路由器的核心配置文件模板，包含了 OSPF、BGP (SRv6, Flowspec)、VRRP 等协议的基本配置。
+- **`frr.docker.conf`**: Docker 专用的 FRR 配置文件，针对容器环境优化。
+- **`snmpd.conf`**: Net-SNMP 代理的配置文件模板，配置了 AgentX 以允许 FRR 和自定义子代理注册 MIB。
+
+**文档文件:**
+- **`netconf_guide.md`**: 提供了关于如何集成 Netconf/YANG 的详细指南，包括 Sysrepo 和 Netopeer2 的编译安装步骤。
+
+**源代码文件:**
+- **`src/frr_core/`**: **此目录存放了经过我们改造的 FRR 核心源码示例。与 `frr_patch` 不同，这里是直接修改后的 C 语言文件，方便您直接查看和修改。**
+- **`src/frr_patch/`**: 存放对 FRR 源码进行修改的补丁文件。这些补丁是作为 `src/f`r_core` 目录中代码修改的参考，如果您选择从 FRR 官方源码开始，可以应用这些补丁。
+- **`src/snmp_subagent/`**: 存放自定义 SNMP 子代理的源码。您可以在此处添加自己的 MIB 扩展。
+
+---
+
+## 🔧 环境要求
 
 *   **操作系统**: Ubuntu 22.04 LTS (推荐) 或其他基于 Debian 的发行版。
 *   **硬件**: 至少 2 vCPU，4GB RAM。
 *   **网络**: 至少两个网络接口（例如 `eth0`, `eth1`）用于模拟路由器端口。
 *   **Linux 内核**: 建议 5.4+，并确保编译时开启了 `CONFIG_IPV6_SEG6_LWTUNNEL` 选项以支持 SRv6。
+*   **Docker** (可选): 20.10+ 版本，用于容器化部署。
 
-## 3. 安装指南
+---
 
-本项目提供两种安装方式，您可以根据需求选择：
+## 📥 安装指南
 
 ### 3.1. 快速安装 (推荐用于快速测试和非源码定制)
 
@@ -101,7 +160,24 @@ whitebox-ne/
     *   编译并安装 FRR。
     *   编译 `src/snmp_subagent/custom_subagent`。
 
-### 3.3. 应用 FRR 配置文件
+### 3.3. Docker 部署（推荐）
+
+容器化部署，环境隔离，易于管理和扩展。
+
+```bash
+# 构建镜像
+./build-docker.sh
+
+# 运行容器
+./run-docker.sh
+
+# 或使用 Docker Compose
+docker-compose up -d
+```
+
+详细信息请参考 [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)。
+
+### 3.4. 应用 FRR 配置文件
 
 安装完成后，需要应用路由配置。
 
@@ -116,7 +192,9 @@ sudo chown frr:frr /etc/frr/frr.conf
 sudo systemctl restart frr
 ```
 
-## 4. 核心功能验证与使用
+---
+
+## ✅ 核心功能验证与使用
 
 ### 4.1. 命令行界面 (CLI) - 华为风格
 
@@ -162,7 +240,9 @@ SNMP 服务默认监听 `127.0.0.1:161`，社区字符串为 `public`。
 
 Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译步骤请参考项目根目录下的 `netconf_guide.md` 文件。
 
-## 5. 源码修改与开发指南
+---
+
+## 💻 源码修改与开发指南
 
 本项目提供了经过改造的 FRR 核心源码示例，方便您直接查看和修改，以实现深度定制。
 
@@ -188,7 +268,7 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 
 | 功能模块 | 对应源码文件 | 关键修改点 | 修改逻辑说明 |
 | :--- | :--- | :--- | :--- |
-| **华为风格 CLI** | `src/frr_core/lib/command.c` | `cmd_elements` 数组 | 在此数组中添加新的 `cmd_element` 结构体，注册华为风格的命令（如 `system-view`, `display`, `save`），并将其 `.func` 指向 FRR 内部对应的处理函数（如 `cmd_configure_terminal`, `cmd_show`, `cmd_write`）。**您可以在 `cmd_show` 函数内部，根据 `args->argv` 的内容，调用 FRR 内部的 API 来获取并格式化输出您希望的华为风格 `display` 命令结果。** |
+| **华为风格 CLI** | `src/frr_core/lib/command.c` | `cmd_elements` 数组 | 在此数组中添加新的 `cmd_element` 结构体，注册华为风格的命令（如 `system-view`, `display`, `save`），并将其 `.func` 指向 FRR 内部的对应的处理函数（如 `cmd_configure_terminal`, `cmd_show`, `cmd_write`）。**您可以在 `cmd_show` 函数内部，根据 `args->argv` 的内容，调用 FRR 内部的 API 来获取并格式化输出您希望的华为风格 `display` 命令结果。** |
 | **SRv6 逻辑** | `src/frr_core/zebra/srv6.c` | `zebra_srv6_locator_add`, `zebra_srv6_sid_install` | `zebra_srv6_locator_add` 负责处理控制面下发的 Locator 配置，您可以在此增加对 Locator 前缀合法性的额外校验，或对接底层硬件驱动。`zebra_srv6_sid_install` 处理不同的 SRv6 Endpoint 行为，您可以在此处增加自定义的计数器或监控逻辑。 |
 | **Flowspec 逻辑** | `src/frr_core/bgpd/bgp_flowspec.c` | `bgp_fs_parse_action`, `bgp_fs_install_zebra` | `bgp_fs_parse_action` 负责解析 Flowspec 路由中的动作，您可以在此增加对私有 Flowspec 动作的解析逻辑。`bgp_fs_install_zebra` 将规则下发至 Zebra，您可以在此重定向输出，将规则发送给外部控制器（如 P4 或 OpenFlow）。 |
 
@@ -211,7 +291,9 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 *   **添加更多自定义 MIB 节点**：在 `custom_subagent.c` 中添加更多的 `netsnmp_create_handler_registration` 和 `netsnmp_register_table` 调用。
 *   **获取真实数据**：将 `handle_custom_mib` 中的模拟数据替换为从 FRR 内部 API、Linux 内核接口（如 `/proc` 或 `sysfs`）、或者其他硬件驱动中获取的真实数据。
 
-## 6. 全量功能测试报告
+---
+
+## 🧪 全量功能测试报告
 
 ### 6.1. 测试拓扑与环境准备
 测试在单节点沙盒环境中进行，通过模拟接口和邻居逻辑验证协议栈处理能力。
@@ -272,7 +354,9 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 
 该方案已具备部署在 x86 或白盒交换机硬件上的基础条件。
 
-## 7. 故障排除
+---
+
+## 🐛 故障排除
 
 | 问题描述 | 常见原因 | 解决方案 |
 | :--- | :--- | :--- |
@@ -282,7 +366,19 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 | BGP/OSPF 邻居无法建立 | 接口 IP 或防火墙问题 | 检查接口 IP 配置是否正确，并确保没有防火墙规则阻挡协议端口（OSPF: 89, BGP: 179）。 |
 | SRv6/Flowspec 不工作 | 内核或 FRR 版本不支持 | 确保 Linux 内核版本支持 SRv6，且 FRR 版本在 8.0 以上。 |
 
-## 8. 二次开发与贡献
+### Docker 相关故障
+
+| 问题描述 | 常见原因 | 解决方案 |
+| :--- | :--- | :--- |
+| 容器无法启动 | 权限不足 | 检查容器是否设置了 `--privileged` 和必要的 `--cap-add` 权限。 |
+| 网络接口不可见 | 网络模式配置错误 | 检查容器网络配置，确保使用正确的网络模式。 |
+| FRR 服务未运行 | 配置文件挂载问题 | 检查配置文件是否正确挂载到容器内。 |
+
+详细信息请参考 [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) 的故障排除部分。
+
+---
+
+## 🤝 二次开发与贡献
 
 我们欢迎您对本项目进行二次开发和贡献。如果您有新的功能需求或改进建议，请遵循以下流程：
 1.  **Fork 项目**：在 GitHub 上 Fork 本项目。
@@ -290,4 +386,25 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 3.  **修改 `src/frr_core/` 下的源码**：直接编辑您希望修改的 C 文件。
 4.  **运行 `build_from_source.sh`**：脚本会自动将您的修改集成到 FRR 的编译过程中。
 5.  **更新文档**：同步更新 `README.md`，说明您的修改和新增功能。
-6.  **提交 Pull Request**：将您的修改提交到本项目的 `master` 分支。
+6.  **提交 Pull Request**：将您的修改提交到本项目的 `main` 分支。
+
+---
+
+## 📄 许可证
+
+本项目采用 MIT 许可证。详细信息请参阅 LICENSE 文件。
+
+---
+
+## 🔗 参考资源
+
+- [FRRouting 官方文档](https://docs.frr.org/)
+- [Net-SNMP 官方文档](http://www.net-snmp.org/)
+- [Docker 官方文档](https://docs.docker.com/)
+- [华为 VRP 命令参考](https://support.huawei.com/enterprise/)
+
+---
+
+**部署成功！** 🎉
+
+如有问题，请查看日志或参考故障排除部分。

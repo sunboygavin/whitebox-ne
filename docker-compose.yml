@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # 白盒网元 - 主路由器
+  whitebox-ne:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: whitebox-ne:latest
+    container_name: whitebox-ne-router
+    hostname: whitebox-router
+    privileged: true  # 需要 CAP_NET_ADMIN 权限
+    network_mode: bridge
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    volumes:
+      # 挂载配置文件（可选，用于动态更新配置）
+      - ./frr.conf:/etc/frr/frr.conf:ro
+      # 挂载日志目录
+      - ./logs:/var/log/frr
+      # 持久化配置
+      - whitebox-config:/etc/frr
+    ports:
+      # SNMP (UDP)
+      - "161:161/udp"
+      # BGP (TCP)
+      - "179:179/tcp"
+      # OSPF (TCP/UDP)
+      - "89:89/tcp"
+      - "89:89/udp"
+    environment:
+      - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD", "vtysh", "-c", "show version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 可选：创建第二个网元用于测试（网络拓扑）
+  whitebox-ne-peer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: whitebox-ne:latest
+    container_name: whitebox-ne-peer
+    hostname: whitebox-peer
+    privileged: true
+    network_mode: bridge
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    volumes:
+      - ./frr-peer.conf:/etc/frr/frr.conf:ro
+      - ./logs-peer:/var/log/frr
+    ports:
+      - "2161:161/udp"  # SNMP
+      - "2179:179/tcp"  # BGP
+      - "2089:89/tcp"   # OSPF
+      - "2089:89/udp"
+    environment:
+      - TZ=Asia/Shanghai
+    profiles:
+      - peer  # 使用 --profile peer 启动此服务
+
+volumes:
+  whitebox-config:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
+    name: whitebox-network
