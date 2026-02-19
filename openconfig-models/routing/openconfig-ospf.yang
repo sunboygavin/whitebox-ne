@@ -1,0 +1,272 @@
+module openconfig-ospf {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/ospf";
+  prefix "oc-ospf";
+
+  import openconfig-extensions {
+    prefix "oc-ext";
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import openconfig-types {
+    prefix oc-types;
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes configuration and operational state
+    data for OSPF protocol.
+
+    Simplified version for whitebox-ne project.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+  }
+
+  grouping ospf-global-config {
+    description
+      "Global configuration for OSPF";
+
+    leaf router-id {
+      type inet:ipv4-address;
+      description
+        "A 32-bit integer uniquely identifying the router
+        in the Autonomous System.";
+    }
+
+    leaf admin-distance {
+      type uint8 {
+        range "1..255";
+      }
+      default "110";
+      description
+        "OSPF administrative distance (default is 110).";
+    }
+  }
+
+  grouping ospf-area-config {
+    description
+      "Configuration parameters relating to an OSPF area";
+
+    leaf identifier {
+      type oc-types:area-identifier;
+      description
+        "An OSPF Area Identifier";
+    }
+
+    leaf description {
+      type string;
+      description
+        "A text description of the OSPF area";
+    }
+  }
+
+  grouping ospf-interface-config {
+    description
+      "Configuration parameters relating to an OSPF interface";
+
+    leaf network-type {
+      type enumeration {
+        enum BROADCAST {
+          description
+            "Specify OSPF broadcast multi-access network";
+        }
+        enum POINT_TO_POINT {
+          description
+            "Specify OSPF point-to-point network";
+        }
+        enum NON_BROADCAST_MULTI_ACCESS {
+          description
+            "Specify OSPF Non-Broadcast Multi-Access
+            (NBMA) network";
+        }
+      }
+      description
+        "The network type of the OSPF interface";
+    }
+
+    leaf passive {
+      type boolean;
+      default "false";
+      description
+        "Enable or disable OSPF on the interface. When set
+        to true, OSPF is not running on the interface.";
+    }
+
+    leaf priority {
+      type uint8 {
+        range "0..255";
+      }
+      description
+        "OSPF priority of the interface.";
+    }
+
+    leaf hello-interval {
+      type uint32 {
+        range "1..65535";
+      }
+      description
+        "The interval in seconds between OSPF hello packets
+        that are sent on the interface.";
+    }
+
+    leaf dead-interval {
+      type uint32 {
+        range "1..65535";
+      }
+      description
+        "The interval in seconds after which a neighbor is
+        declared down if no OSPF hello packets are received.";
+    }
+
+    leaf retransmit-interval {
+      type uint32 {
+        range "1..65535";
+      }
+      description
+        "The interval in seconds between OSPF link state
+        advertisement retransmissions.";
+    }
+
+    leaf mtu {
+      type uint32 {
+        range "576..65535";
+      }
+      description
+        "The size in bytes of the OSPF protocol MTU.";
+    }
+  }
+
+  grouping ospf-neighbor-config {
+    description
+      "Configuration parameters relating to an OSPF neighbor";
+
+    leaf neighbor-id {
+      type inet:ipv4-address;
+      description
+        "Neighbor IPv4 address";
+    }
+
+    leaf cost {
+      type uint32 {
+        range "1..65535";
+      }
+      description
+        "OSPF metric for the neighbor";
+    }
+
+    leaf poll-interval {
+      type uint32 {
+        range "1..65535";
+      }
+      description
+        "OSPF poll interval for the neighbor";
+    }
+  }
+
+  container ospf {
+    description
+      "Top-level OSPF configuration";
+
+    container global {
+      description
+        "Global OSPF configuration";
+
+      container config {
+        description
+          "Configuration parameters for OSPF global";
+
+        uses ospf-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for OSPF global";
+
+        uses ospf-global-config;
+      }
+    }
+
+    container areas {
+      description
+        "Configuration for OSPF areas";
+
+      list area {
+        key "identifier";
+
+        description
+          "An OSPF area";
+
+        leaf identifier {
+          type leafref {
+            path "../config/identifier";
+          }
+          description
+            "Reference to area identifier";
+        }
+
+        container config {
+          description
+            "Configuration parameters for the area";
+
+          uses ospf-area-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for the area";
+
+          uses ospf-area-config;
+        }
+
+        container interfaces {
+          description
+            "Configuration for OSPF interfaces in the area";
+
+          list interface {
+            key "interface-id";
+
+            description
+              "An OSPF interface";
+
+            leaf interface-id {
+              type leafref {
+                path "../config/interface-id";
+              }
+              description
+                "Reference to interface ID";
+            }
+
+            container config {
+              description
+                "Configuration for the interface";
+
+              uses ospf-interface-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state for the interface";
+
+              uses ospf-interface-config;
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,404 @@
+module openconfig-qos {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/qos";
+  prefix "oc-qos";
+
+  import openconfig-extensions {
+    prefix "oc-ext";
+  }
+  import openconfig-inet-types {
+    prefix oc-inet;
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes configuration and operational state
+    data for Quality of Service (QoS).
+
+    Simplified version for whitebox-ne project.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+  }
+
+  grouping qos-config {
+    description
+      "Global QoS configuration";
+  }
+
+  grouping qos-classifier-config {
+    description
+      "Configuration for QoS classifier";
+
+    leaf name {
+      type string;
+      description
+        "Unique name for the classifier";
+    }
+
+    leaf match-type {
+      type enumeration {
+        enum DSCP {
+          description
+            "Match on DSCP field";
+        }
+        enum IP_PROTOCOL {
+          description
+            "Match on IP protocol field";
+        }
+        enum IPV4_SRC {
+          description
+            "Match on IPv4 source address";
+        }
+        enum IPV4_DST {
+          description
+            "Match on IPv4 destination address";
+        }
+      }
+      description
+        "Type of match to be performed";
+    }
+  }
+
+  grouping qos-classifier-term-config {
+    description
+      "Configuration for a match term within a classifier";
+
+    leaf term-id {
+      type uint32;
+      description
+        "Unique identifier for the match term";
+    }
+
+    leaf dscp-set {
+      type uint8 {
+        range "0..63";
+      }
+      description
+        "DSCP value to match";
+    }
+
+    leaf dscp-mask {
+      type uint8 {
+        range "0..63";
+      }
+      description
+        "DSCP mask to apply in the match";
+    }
+
+    leaf ip-protocol {
+      type enumeration {
+        enum TCP {
+          value 6;
+          description
+            "Transport Protocol TCP";
+        }
+        enum UDP {
+          value 17;
+          description
+            "Transport Protocol UDP";
+        }
+        enum ICMP {
+          value 1;
+          description
+            "Internet Control Message Protocol";
+        }
+        enum IGMP {
+          value 2;
+          description
+            "Internet Group Management Protocol";
+        }
+        enum IP {
+          value 0;
+          description
+            "Any IP Protocol";
+        }
+      }
+      description
+        "The IP protocol to match";
+    }
+  }
+
+  grouping qos-queue-config {
+    description
+      "Configuration for a queue";
+
+    leaf name {
+      type string;
+      description
+        "Unique name for the queue";
+    }
+
+    leaf queue-state {
+      type enumeration {
+        enum ENABLED {
+          description
+            "Queue is enabled";
+        }
+        enum DISABLED {
+          description
+            "Queue is disabled";
+        }
+      }
+      description
+        "Administrative state of the queue";
+    }
+  }
+
+  grouping qos-scheduler-config {
+    description
+      "Configuration for QoS scheduler";
+
+    leaf type {
+      type enumeration {
+        enum ONE_RATE_TWO_COLOR {
+          description
+            "One Rate, Three Color marker";
+        }
+        enum TWO_RATE_THREE_COLOR {
+          description
+            "Two Rate, Three Color marker";
+        }
+        enum STRICT_PRIORITY {
+          description
+            "Strict priority scheduler";
+        }
+      }
+      description
+        "The type of scheduler to be used";
+    }
+  }
+
+  grouping qos-queues-config {
+    description
+      "Configuration for QoS queues on an interface";
+
+    leaf queue-profile {
+      type leafref {
+        path "/qos/queue-profiles/queue-profile/config/name";
+      }
+      description
+        "The queue profile referenced by the interface";
+    }
+  }
+
+  grouping qos-scheduler-config {
+    description
+      "Configuration for QoS scheduler on an interface";
+
+    leaf scheduler-profile {
+      type leafref {
+        path "/qos/scheduler-profiles/scheduler-profile/config/name";
+      }
+      description
+        "The scheduler profile referenced by the interface";
+    }
+  }
+
+  container qos {
+    description
+      "Top-level container for QoS";
+
+    container config {
+      description
+        "Global configuration parameters for QoS";
+
+      uses qos-config;
+    }
+
+    container state {
+      config false;
+      description
+        "Operational state parameters for QoS";
+
+      uses qos-config;
+    }
+
+    container classifiers {
+      description
+        "Configuration of QoS classifiers";
+
+      list classifier {
+        key "name";
+
+        description
+          "List of classifiers";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to classifier name";
+        }
+
+        container config {
+          description
+            "Configuration for the classifier";
+
+          uses qos-classifier-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for the classifier";
+
+          uses qos-classifier-config;
+        }
+
+        container terms {
+          description
+            "Terms in the classifier";
+
+          list term {
+            key "term-id";
+
+            description
+              "List of terms in the classifier";
+
+            leaf term-id {
+              type leafref {
+                path "../config/term-id";
+              }
+              description
+                "Reference to term identifier";
+            }
+
+            container config {
+              description
+                "Configuration for the term";
+
+              uses qos-classifier-term-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state for the term";
+
+              uses qos-classifier-term-config;
+            }
+          }
+        }
+      }
+    }
+
+    container queue-profiles {
+      description
+        "QoS queue profiles";
+
+      list queue-profile {
+        key "name";
+
+        description
+          "List of queue profiles";
+
+        leaf name {
+          type leafref {
+            path "../config" name;
+          }
+          description
+            "Reference to queue profile name";
+        }
+
+        container config {
+          description
+            "Configuration for the queue profile";
+
+          uses qos-queue-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for the queue profile";
+
+          uses qos-queue-config;
+        }
+      }
+    }
+
+    container scheduler-profiles {
+      description
+        "QoS scheduler profiles";
+
+      list scheduler-profile {
+        key "name";
+
+        description
+          "List of scheduler profiles";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to scheduler profile name";
+        }
+
+        container config {
+          description
+            "Configuration for the scheduler profile";
+
+          uses qos-scheduler-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for the scheduler profile";
+
+          uses qos-scheduler-config;
+        }
+      }
+    }
+
+    container interfaces {
+      description
+        "Configuration of QoS interfaces";
+
+      list interface {
+        key "interface-id";
+
+        description
+          "List of interfaces with QoS configuration";
+
+        leaf interface-id {
+          type leafref {
+            path "../config/interface-id";
+          }
+          description
+            "Reference to interface ID";
+        }
+
+        container config {
+          description
+            "Configuration for QoS on the interface";
+
+          uses qos-queues-config;
+          uses qos-scheduler-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for QoS on the interface";
+
+          uses qos-queues-config;
+          uses qos-scheduler-config;
+        }
+      }
+    }
+  }
+}

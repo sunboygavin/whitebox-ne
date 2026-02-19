@@ -156,6 +156,36 @@ install_yang_models() {
         exit 1
     fi
     
+    # Install OSPF model
+    if [ -f "$MODEL_DIR/routing/openconfig-ospf.yang" ]; then
+        sysrepoctl --install --yang=openconfig-ospf.yang \
+            --search-dir="$MODEL_DIR/routing/"
+        log_info "Installed openconfig-ospf.yang"
+    else
+        log_error "openconfig-ospf.yang not found"
+        exit 1
+    fi
+    
+    # Install MPLS model
+    if [ -f "$MODEL_DIR/mpls/openconfig-mpls.yang" ]; then
+        sysrepoctl --install --yang=openconfig-mpls.yang \
+            --search-dir="$MODEL_DIR/mpls/"
+        log_info "Installed openconfig-mpls.yang"
+    else
+        log_error "openconfig-mpls.yang not found"
+        exit 1
+    fi
+    
+    # Install QoS model
+    if [ -f "$MODEL_DIR/qos/openconfig-qos.yang" ]; then
+        sysrepoctl --install --yang=openconfig-qos.yang \
+            --search-dir="$MODEL_DIR/qos/"
+        log_info "Installed openconfig-qos.yang"
+    else
+        log_error "openconfig-qos.yang not found"
+        exit 1
+    fi
+    
     log_info "OpenConfig YANG models installed successfully"
 }
 

@@ -1,0 +1,349 @@
+module openconfig-mpls {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/mpls";
+  prefix "oc-mpls";
+
+  import openconfig-extensions {
+    prefix "oc-ext";
+  }
+  import openconfig-mpls-types {
+    prefix "oc-mplst";
+  }
+  import openconfig-inet-types {
+    prefix oc-inet;
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes configuration and operational state
+    data for MPLS (Multiprotocol Label Switching).
+
+    Simplified version for whitebox-ne project.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+  }
+
+  grouping mpls-ldp-global-config {
+    description
+      "Global MPLS LDP configuration";
+
+    leaf enabled {
+      type boolean;
+      default "false";
+      description
+        "When set to true, LDP is enabled.";
+    }
+
+    leaf router-id {
+      type oc-inet:ipv4-address;
+      description
+        "Router ID of the LDP instance.";
+    }
+  }
+
+  grouping mpls-ldp-interface-config {
+    description
+      "Configuration for MPLS LDP on an interface";
+
+    leaf interface-id {
+      type string;
+      description
+        "Reference to an interface";
+    }
+
+    leaf hello-interval {
+      type uint16;
+      units "seconds";
+      description
+        "Interval between LDP hello messages.";
+    }
+
+    leaf hold-time {
+      type uint16;
+      units "seconds";
+      description
+        "Time LDP neighbor adjacency is maintained.";
+    }
+  }
+
+  grouping mpls-ldp-neighbor-config {
+    description
+      "Configuration for MPLS LDP targeted neighbor";
+
+    leaf lsr-id {
+      type oc-inet:ipv4-address;
+      description
+        "LSR ID of the targeted neighbor.";
+    }
+  }
+
+  grouping mpls-static-lsp-config {
+    description
+      "Configuration for MPLS static LSP";
+
+    leaf name {
+      type string;
+      description
+        "Unique name for the LSP";
+    }
+
+    leaf ingress-label {
+      type oc-mplst:mpls-label;
+      description
+        "The ingress label value.";
+    }
+  }
+
+  grouping mpls-static-lsp-ingress-config {
+    description
+      "Configuration for MPLS static LSP ingress configuration";
+
+    leaf forwarding-equivalence-class {
+      type string;
+      description
+        "A FEC is an identifier of a set of IP prefixes that
+        will be mapped to the LSP.";
+    }
+
+    leaf next-hop {
+      type oc-inet:ip-address;
+      description
+        "The next-hop IP address for the LSP.";
+    }
+
+    leaf outgoing-label {
+      type oc-mplst:mpls-label;
+      description
+        "The outgoing label value.";
+    }
+  }
+
+  grouping mpls-static-lsp-transit-config {
+    description
+      "Configuration for MPLS static LSP transit configuration";
+
+    leaf incoming-label {
+      type oc-mplst:mpls-label;
+      description
+        "The incoming label value.";
+    }
+
+    leaf outgoing-label {
+      type oc-mplst:mpls-label;
+      description
+        "The outgoing label value.";
+    }
+
+    leaf next-hop {
+      type oc-inet:ip-address;
+      description
+        "The next-hop IP address.";
+    }
+  }
+
+  container mpls {
+    description
+      "Top-level MPLS configuration";
+
+    container global {
+      description
+        "Global MPLS configuration";
+
+      container config {
+        description
+          "Configuration parameters for MPLS";
+
+        uses mpls-ldp-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for MPLS";
+
+        uses mpls-ldp-global-config;
+      }
+    }
+
+    container ldp {
+      description
+        "MPLS LDP configuration";
+
+      container global {
+        description
+          "Global MPLS LDP configuration";
+
+        container config {
+          description
+            "Configuration parameters for MPLS LDP global";
+
+          uses mpls-ldp-global-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for MPLS LDP global";
+
+          uses mpls-ldp-global-config;
+        }
+
+        container interfaces {
+          description
+            "Configuration of MPLS LDP interfaces";
+
+          list interface {
+            key "interface-id";
+
+            description
+              "List of interfaces where LDP is enabled";
+
+            leaf interface-id {
+              type leafref {
+                path "../config/interface-id";
+              }
+              description
+                "Reference to the interface";
+            }
+
+            container config {
+              description
+                "Configuration for the interface";
+
+              uses mpls-ldp-interface-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state for the interface";
+
+              uses mpls-ldp-interface-config;
+            }
+          }
+        }
+
+        container targeted-neighbors {
+          description
+            "Configuration of LDP targeted neighbors";
+
+          list targeted-neighbor {
+            key "lsr-id";
+
+            description
+              "List of LDP targeted neighbors";
+
+            leaf lsr-id {
+              type leafref {
+                path "../config/lsr-id";
+              }
+              description
+                "Reference to the neighbor";
+            }
+
+            container config {
+              description
+                "Configuration for the targeted neighbor";
+
+              uses mpls-ldp-neighbor-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state for the targeted neighbor";
+
+              uses mpls-ldp-neighbor-config;
+            }
+          }
+        }
+      }
+    }
+
+    container static-lsps {
+      description
+        "Configuration for static MPLS LSPs";
+
+      list static-lsp {
+        key "name";
+
+        description
+          "List of static LSPs";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to the LSP name";
+        }
+
+        container config {
+          description
+            "Configuration for the LSP";
+
+          uses mpls-static-lsp-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for the LSP";
+
+          uses mpls-static-lsp-config;
+        }
+
+        container ingress {
+          description
+            "Configuration for the LSP ingress";
+
+          container config {
+            description
+              "Configuration for ingress LSP";
+
+            uses mpls-static-lsp-ingress-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state for ingress LSP";
+
+            uses mpls-static-lsp-ingress-config;
+          }
+        }
+
+        container transit {
+          description
+            "Configuration for the LSP transit";
+
+          container config {
+            description
+              "Configuration for transit LSP";
+
+            uses mpls-static-lsp-transit-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state for transit LSP";
+
+            uses mpls-static-lsp-transit-config;
+          }
+        }
+      }
+    }
+  }
+}
