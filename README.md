@@ -34,6 +34,19 @@ sudo vtysh
 
 ---
 
+## ⚠️ 重要提示
+
+**在生产环境部署前，请务必执行安全加固**:
+```bash
+sudo ./security-hardening.sh
+```
+
+详细信息请参考:
+- [安全加固指南](SECURITY_HARDENING.md)
+- [功能优化路线图](OPTIMIZATION_ROADMAP.md)
+
+---
+
 ## 核心功能概览
 
 | 功能模块 | 核心组件 | 协议支持 | 接口类型 | 备注 |
@@ -411,6 +424,11 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 - [Sysrepo 文档](https://github.com/sysrepo/sysrepo)
 - [Netopeer2 文档](https://github.com/sysrepo/netopeer2)
 - [YANG 模型库](https://github.com/YangModels/yang)
+
+### 项目文档
+- [安全加固指南](SECURITY_HARDENING.md) - 生产环境安全配置
+- [功能优化路线图](OPTIMIZATION_ROADMAP.md) - 功能增强计划
+- [OpenConfig 实施报告](OPENCONFIG_IMPLEMENTATION_REPORT.md) - OpenConfig 集成详情
 
 ---
 

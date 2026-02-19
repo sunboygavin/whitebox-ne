@@ -9,7 +9,7 @@ services:
     image: whitebox-ne:latest
     container_name: whitebox-ne-router
     hostname: whitebox-router
-    privileged: true  # 需要 CAP_NET_ADMIN 权限
+    # privileged: true  # 移除过度权限，仅使用必要的 capabilities
     network_mode: bridge
     restart: unless-stopped
     cap_add:
@@ -48,7 +48,7 @@ services:
     image: whitebox-ne:latest
     container_name: whitebox-ne-peer
     hostname: whitebox-peer
-    privileged: true
+    # privileged: true  # 移除过度权限，仅使用必要的 capabilities
     network_mode: bridge
     restart: unless-stopped
     cap_add:
