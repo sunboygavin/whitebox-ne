@@ -1,0 +1,409 @@
+module openconfig-system {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/system";
+  prefix "oc-sys";
+
+  import openconfig-extensions {
+    prefix "oc-ext";
+  }
+  import ietf-yang-types {
+    prefix "yang";
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes configuration and operational state
+    data for system-level parameters and services.
+
+    Simplified version for whitebox-ne project.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+  }
+
+  grouping system-config {
+    description
+      "Configuration parameters for the system";
+
+    leaf hostname {
+      type string;
+      description
+        "Hostname of the system";
+    }
+  }
+
+  grouping system-state {
+    description
+      "Operational state parameters for the system";
+
+    leaf current-datetime {
+      type yang:date-and-time;
+      description
+        "Current date and time of the system";
+    }
+
+    leaf boot-time {
+      type yang:date-and-time;
+      description
+        "System boot time";
+    }
+
+    leaf os-version {
+      type string;
+      description
+        "Operating system version of the system";
+    }
+
+    leaf uptime {
+      type uint64;
+      units "seconds";
+      description
+        "Time since system last restarted";
+    }
+  }
+
+  grouping ntp-server-config {
+    description
+      "Configuration parameters for NTP server";
+
+    leaf address {
+      type string;
+      description
+        "Address of the NTP server";
+    }
+
+    leaf port {
+      type uint16 {
+        range "1..65535";
+      }
+      default "123";
+      description
+        "Port number of the NTP server";
+    }
+
+    leaf version {
+      type uint8 {
+        range "1..4";
+      }
+      default "4";
+      description
+        "NTP protocol version";
+    }
+
+    leaf association-type {
+      type enumeration {
+        enum SERVER {
+          description
+            "Use configured NTP server as a regular server";
+        }
+        enum PEER {
+          description
+            "Use configured NTP server as a peer";
+        }
+        enum BROADCAST {
+          description
+            "Use configured NTP server as a broadcast server";
+        }
+      }
+      default "SERVER";
+      description
+        "The type of association with the NTP server";
+    }
+
+    leaf iburst {
+      type boolean;
+      default "false";
+      description
+        "Enable or disable iburst mode";
+    }
+
+    leaf prefer {
+      type boolean;
+      default "false";
+      description
+        "Prefer this NTP server over others";
+    }
+  }
+
+  grouping ntp-server-state {
+    description
+      "Operational state parameters for NTP server";
+
+    leaf stratum {
+      type uint8;
+      description
+        "The stratum level of the NTP server";
+    }
+
+    leaf poll-interval {
+      type uint32;
+      units "seconds";
+      description
+        "The poll interval for the NTP server";
+    }
+
+    leaf reachability {
+      type uint8;
+      description
+        "The reachability of the NTP server";
+    }
+
+    leaf offset {
+      type decimal64 {
+        fraction-digits 4;
+      }
+      units "seconds";
+      description
+        "The clock offset to the NTP server";
+    }
+
+    leaf delay {
+      type decimal64 {
+        fraction-digits 4;
+      }
+      units "seconds";
+      description
+        "The round-trip delay to the NTP server";
+    }
+
+    leaf dispersion {
+      type decimal64 {
+        fraction-digits 4;
+      }
+      units "seconds";
+      description
+        "The dispersion to the NTP server";
+    }
+
+    leaf root-delay {
+      type decimal64 {
+        fraction-digits 4;
+      }
+      units "seconds";
+      description
+        "The round-trip delay to the NTP root server";
+    }
+
+    leaf root-dispersion {
+      type decimal64 {
+        fraction-digits 4;
+      }
+      units "seconds";
+      description
+        "The dispersion to the NTP root server";
+    }
+
+    leaf reference-id {
+      type string;
+      description
+        "The reference identifier for the NTP server";
+    }
+
+    leaf sync-state {
+      type enumeration {
+        enum SYNCHRONIZED {
+          description
+            "NTP is synchronized with this server";
+        }
+        enum UNSYNCHRONIZED {
+          description
+            "NTP is not synchronized with this server";
+        }
+      }
+      description
+        "The synchronization state of the NTP server";
+    }
+  }
+
+  grouping ntp-global-config {
+    description
+      "Configuration parameters for NTP";
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Enable or disable the NTP protocol";
+    }
+
+    leaf ntp-source-address {
+      type string;
+      description
+        "Source address to use for NTP packets";
+    }
+
+    leaf enable-ntp-auth {
+      type boolean;
+      default "false";
+      description
+        "Enable NTP authentication";
+    }
+  }
+
+  grouping ntp-keys-config {
+    description
+      "Configuration parameters for NTP authentication keys";
+
+    leaf key-id {
+      type uint16 {
+        range "1..65535";
+      }
+      description
+        "The key identifier for the NTP authentication key";
+    }
+
+    leaf key-value {
+      type string;
+      description
+        "The NTP authentication key value";
+    }
+
+    leaf key-type {
+      type enumeration {
+        enum KEY_MD5 {
+          description
+            "MD5 digest";
+        }
+        enum KEY_SHA1 {
+          description
+            "SHA1 digest";
+        }
+      }
+      default "KEY_MD5";
+      description
+        "The NTP authentication key type";
+    }
+
+    leaf trusted {
+      type boolean;
+      default "true";
+      description
+        "Whether this key is trusted";
+    }
+  }
+
+  container system {
+    description
+      "Top-level container for system configuration and
+      operational state data";
+
+    container config {
+      description
+        "Configuration parameters for the system";
+
+      uses system-config;
+    }
+
+    container state {
+      config false;
+      description
+        "Operational state parameters for the system";
+
+      uses system-config;
+      uses system-state;
+    }
+
+    container ntp {
+      description
+        "Configuration and operational state parameters for
+        NTP protocol";
+
+      container config {
+        description
+          "Configuration parameters for NTP";
+
+        uses ntp-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for NTP";
+
+        uses ntp-global-config;
+      }
+
+      container servers {
+        description
+          "Configuration of NTP servers";
+
+        list server {
+          key "address";
+          description
+            "List of NTP servers to use for clock
+            synchronization";
+
+          leaf address {
+            type leafref {
+              path "../config/address";
+            }
+            description
+              "The address of the NTP server";
+          }
+
+          container config {
+            description
+              "Configuration parameters for the NTP server";
+
+            uses ntp-server-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters for the NTP server";
+
+            uses ntp-server-config;
+            uses ntp-server-state;
+          }
+        }
+      }
+
+      container authentication-keys {
+        description
+          "Configuration of NTP authentication keys";
+
+        list authentication-key {
+          key "key-id";
+          description
+            "List of NTP authentication keys";
+
+          leaf key-id {
+            type leafref {
+              path "../config/key-id";
+            }
+            description
+              "The key identifier for the NTP authentication key";
+          }
+
+          container config {
+            description
+              "Configuration parameters for the NTP authentication
+              key";
+
+            uses ntp-keys-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state parameters for the NTP
+              authentication key";
+
+            uses ntp-keys-config;
+          }
+        }
+      }
+    }
+  }
+}

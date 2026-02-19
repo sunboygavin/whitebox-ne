@@ -1,0 +1,380 @@
+module openconfig-bgp {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/bgp";
+  prefix "oc-bgp";
+
+  import openconfig-extensions {
+    prefix "oc-ext";
+  }
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes a YANG model for BGP protocol
+    configuration. It is a limited subset focused on basic
+    BGP neighbor configuration for the whitebox router
+    project.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+    reference "0.0.1";
+  }
+
+  grouping bgp-global-config {
+    description
+      "Global configuration parameters for the BGP router";
+
+    leaf as {
+      type uint32;
+      description
+        "Local autonomous system number of the router.
+
+        For 4-byte AS numbers, the as-number is encoded as a
+        32-bit integer.";
+    }
+
+    leaf router-id {
+      type inet:ipv4-address;
+      description
+        "Router id of the router - an unsigned 32-bit integer
+        expressed in dotted quad notation.";
+    }
+  }
+
+  grouping bgp-neighbor-config {
+    description
+      "Configuration parameters relating to a BGP neighbor";
+
+    leaf neighbor-address {
+      type inet:ip-address;
+      description
+        "IP address of the BGP neighbor or the interface
+        if a neighbor is established over an interface.";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Administratively enable or disable the BGP neighbor";
+    }
+
+    leaf peer-as {
+      type uint32;
+      description
+        "The autonomous system number of the peer.";
+    }
+
+    leaf local-as {
+      type uint32;
+      description
+        "The local autonomous system number used for the session
+        with the peer.  For EBGP peers this may differ from
+        the global BGP router autonomous system number.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "An optional textual description (note: not a valid
+        BGP identifier)";
+    }
+  }
+
+  grouping bgp-neighbor-state {
+    description
+      "State variables relating to a BGP neighbor";
+
+    leaf session-state {
+      type enumeration {
+        enum IDLE {
+          description
+            "Idle state";
+        }
+        enum CONNECT {
+          description
+            "Connect state";
+        }
+        enum ACTIVE {
+          description
+            "Active state";
+        }
+        enum OPENSENT {
+          description
+            "OpenSent state";
+        }
+        enum OPENCONFIRM {
+          description
+            "OpenConfirm state";
+        }
+        enum ESTABLISHED {
+          description
+            "Established state";
+        }
+      }
+      description
+        "Operational state of the BGP session.";
+    }
+
+    leaf last-established {
+      type uint64;
+      units "seconds";
+      description
+        "The time since the BGP session last transitioned to
+        ESTABLISHED state.";
+    }
+
+    leaf established-transitions {
+      type uint64;
+      description
+        "Number of transitions to the ESTABLISHED state from
+        other states.";
+    }
+
+    leaf total-messages {
+      type uint64;
+      description
+        "Total number of messages sent and received from the
+        neighbor.";
+    }
+
+    leaf prefixes-received {
+      type uint32;
+      description
+        "The number of prefixes received from the neighbor.";
+    }
+  }
+
+  grouping bgp-neighbor-afi-safi-config {
+    description
+      "Configuration parameters for a BGP AFI-SAFI";
+
+    leaf afi-safi-name {
+      type identityref {
+        base oc-bgp-types:afi-safi-type;
+      }
+      description
+        "The AFI-SAFI being configured";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Enable/disable the address family for the neighbor";
+    }
+  }
+
+  identity bgp-capability {
+    description
+      "Base identity for supported BGP capabilities";
+  }
+
+  identity afi-safi-type {
+    description
+      "Base identity type for AFI-SAFI";
+  }
+
+  identity ipv4-unicast {
+    base afi-safi-type;
+    description
+      "IPv4 unicast (AFI=1, SAFI=1)";
+  }
+
+  identity ipv6-unicast {
+    base afi-safi-type;
+    description
+      "IPv6 unicast (AFI=2, SAFI=1)";
+  }
+
+  identity ipv4-labeled-unicast {
+    base afi-safi-type;
+    description
+      "Labeled IPv4 unicast (AFI=1, SAFI=4)";
+  }
+
+  identity ipv6-labeled-unicast {
+    base afi-safi-type;
+    description
+      "Labeled IPv6 unicast (AFI=2, SAFI=4)";
+  }
+
+  identity l2vpn-evpn {
+    base afi-safi-type;
+    description
+      "L2VPN EVPN (AFI=25, SAFI=65)";
+  }
+
+  identity ipv4-flowspec {
+    base afi-safi-type;
+    description
+      "IPv4 Flowspec (AFI=1, SAFI=133)";
+  }
+
+  identity ipv6-flowspec {
+    base afi-safi-type;
+    description
+      "IPv6 Flowspec (AFI=2, SAFI=133)";
+  }
+
+  identity l3vpn-ipv4-unicast {
+    base afi-safi-type;
+    description
+      "L3VPN IPv4 unicast (AFI=1, SAFI=128)";
+  }
+
+  identity l3vpn-ipv6-unicast {
+    base afi-safi-type;
+    description
+      "L3VPN IPv6 unicast (AFI=2, SAFI=128)";
+  }
+
+  identity sr-policy {
+    base afi-safi-type;
+    description
+      "SR Policy (AFI=1, SAFI=73)";
+  }
+
+  container bgp {
+    description
+      "Top-level configuration and state data for the BGP router";
+
+    container global {
+      description
+        "Global configuration for the BGP router";
+
+      container config {
+        description
+          "Configuration parameters for the BGP global scope";
+
+        uses bgp-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "State parameters relating to the BGP global scope";
+
+        uses bgp-global-config;
+      }
+
+      container afi-safis {
+        description
+          "Address family specific configuration";
+
+        list afi-safi {
+          key "afi-safi-name";
+
+          description
+            "AFI-SAFI configuration";
+
+          leaf afi-safi-name {
+            type leafref {
+              path "../config/afi-safi-name";
+            }
+            description
+              "Reference to the AFI-SAFI name";
+          }
+
+          container config {
+            description
+              "Configuration parameters for the AFI-SAFI";
+
+            uses bgp-neighbor-afi-safi-config;
+          }
+
+          container state {
+            config false;
+            description
+              "State information for the AFI-SAFI";
+
+            uses bgp-neighbor-afi-safi-config;
+          }
+        }
+      }
+    }
+
+    container neighbors {
+      description
+        "Configuration for BGP neighbors";
+
+      list neighbor {
+        key "neighbor-address";
+
+        description
+          "List of BGP neighbors configured on the local system";
+
+        leaf neighbor-address {
+          type leafref {
+            path "../config/neighbor-address";
+          }
+          description
+            "Reference to the neighbor address";
+        }
+
+        container config {
+          description
+            "Configuration parameters relating to the BGP neighbor";
+
+          uses bgp-neighbor-config;
+        }
+
+        container state {
+          config false;
+          description
+            "State information relating to the BGP neighbor";
+
+          uses bgp-neighbor-config;
+          uses bgp-neighbor-state;
+        }
+
+        container afi-safis {
+          description
+            "Per-neighbor address family configuration";
+
+          list afi-safi {
+            key "afi-safi-name";
+
+            description
+              "AFI-SAFI configuration for the neighbor";
+
+            leaf afi-safi-name {
+              type leafref {
+                path "../config/afi-safi-name";
+              }
+              description
+                "Reference to the AFI-SAFI name";
+            }
+
+            container config {
+              description
+                "Configuration parameters for the AFI-SAFI";
+
+              uses bgp-neighbor-afi-safi-config;
+            }
+
+            container state {
+              config false;
+              description
+                "State information for the AFI-SAFI";
+
+              uses bgp-neighbor-afi-safi-config;
+            }
+          }
+        }
+      }
+    }
+  }
+}

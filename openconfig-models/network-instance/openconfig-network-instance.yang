@@ -1,0 +1,263 @@
+module openconfig-network-instance {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/network-instance";
+  prefix "oc-netinst";
+
+  import openconfig-bgp {
+    prefix "oc-bgp";
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes configuration and operational state
+    data for network instances (also known as VRFs) in the system.
+    A network instance is a logical separation of forwarding tables
+    in the system.
+
+    Simplified version for whitebox-ne project.";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+  }
+
+  grouping network-instance-config {
+    description
+      "Configuration parameters for a network instance";
+
+    leaf name {
+      type string;
+      description
+        "Unique identifier for the network instance";
+    }
+
+    leaf description {
+      type string;
+      description
+        "A textual description of the network instance";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Administratively enable or disable the network instance";
+    }
+
+    leaf type {
+      type enumeration {
+        enum DEFAULT_INSTANCE {
+          description
+            "The default network instance";
+        }
+        enum L3VRF {
+          description
+            "A virtual routing and forwarding instance";
+        }
+        enum L2P2P {
+          description
+            "A point-to-point Layer 2 instance";
+        }
+        enum L2VSI {
+          description
+            "A virtual switching instance";
+        }
+      }
+      default "DEFAULT_INSTANCE";
+      description
+        "The type of network instance";
+    }
+  }
+
+  grouping network-instance-state {
+    description
+      "Operational state parameters for the network instance";
+
+    leaf route-distinguisher {
+      type string;
+      description
+        "The route distinguisher for the VRF";
+    }
+  }
+
+  container network-instances {
+    description
+      "Enclosing container for the list of network instances";
+
+    list network-instance {
+      key "name";
+
+      description
+        "Network instances configured on the local system";
+
+      leaf name {
+        type leafref {
+          path "../config/name";
+        }
+        description
+          "Reference to the name of the network instance";
+      }
+
+      container config {
+        description
+          "Configuration parameters for the network instance";
+
+        uses network-instance-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for the network instance";
+
+        uses network-instance-config;
+        uses network-instance-state;
+      }
+
+      container protocols {
+        description
+          "Protocols running in the network-instance";
+
+        list protocol {
+          key "identifier name";
+
+          description
+            "A process / instance running on the device for a given
+            protocol, such as BGP, OSPF, etc.";
+
+          leaf identifier {
+            type leafref {
+              path "../config/identifier";
+            }
+            description
+              "Reference to the protocol identifier";
+          }
+
+          leaf name {
+            type leafref {
+              path "../config/name";
+            }
+            description
+              "Reference to the protocol name";
+          }
+
+          container config {
+            description
+              "Configuration data relating to the protocol";
+
+            uses protocol-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Operational state data for the protocol";
+
+            uses protocol-config;
+            uses protocol-state;
+          }
+
+          container bgp {
+            when "../config/identifier = 'oc-netinst:STATIC'" {
+              description
+                "Only include BGP-specific config when the protocol
+                instance is of type BGP";
+            }
+            description
+              "Configuration and operational state relating to the
+              BGP protocol instance";
+
+            uses oc-bgp:bgp;
+          }
+        }
+      }
+    }
+  }
+
+  grouping protocol-config {
+    description
+      "Configuration data for protocols running in a network
+      instance";
+
+    leaf identifier {
+      type identityref {
+        base protocol-type;
+      }
+      description
+        "The protocol identifier for the protocol or protocol
+        instance";
+    }
+
+    leaf name {
+      type string;
+      description
+        "An operator-assigned name for the protocol or protocol
+        instance";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Administratively enable or disable the protocol or protocol
+        instance";
+    }
+  }
+
+  grouping protocol-state {
+    description
+      "Operational state data for protocols running in a network
+      instance";
+
+    leaf protocol-state {
+      type enumeration {
+        enum PROTOCOL_DOWN {
+          description
+            "Protocol is not operational";
+        }
+        enum PROTOCOL_UP {
+          description
+            "Protocol is operational";
+        }
+      }
+      description
+        "The operational state of the protocol";
+    }
+  }
+
+  identity protocol-type {
+    description
+      "Base identity for all protocol types";
+  }
+
+  identity BGP {
+    base protocol-type;
+    description
+      "BGP protocol";
+  }
+
+  identity OSPF {
+    base protocol-type;
+    description
+      "OSPF protocol";
+  }
+
+  identity ISIS {
+    base protocol-type;
+    description
+      "IS-IS protocol";
+  }
+
+  identity STATIC {
+    base protocol-type;
+    description
+      "Static routing protocol";
+  }
+}

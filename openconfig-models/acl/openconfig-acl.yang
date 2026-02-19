@@ -1,0 +1,350 @@
+module openconfig-acl {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/acl";
+  prefix "oc-acl";
+
+  import openconfig-extensions {
+    prefix "oc-ext";
+  }
+  import openconfig-packet-match-types {
+    prefix "oc-pkt-match";
+  }
+  import openconfig-inet-types {
+    prefix "oc-inet";
+  }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes configuration and operational state
+    data for Access Control Lists (ACLs) which can be applied
+    to interfaces or other entities.
+
+    Simplified version for whitebox-ne project.";
+
+  oc-ext:openconfig-version "0.0.1";
+
+  revision "2024-02-20" {
+    description
+      "Initial revision for whitebox-ne OpenConfig integration";
+  }
+
+  identity acl-type {
+    description
+      "Base identity for access list types";
+  }
+
+  identity ACL_IPV4 {
+    base acl-type;
+    description
+      "Access Control List for IPv4";
+  }
+
+  identity ACL_IPV6 {
+    base acl-type;
+    description
+      "Access Control List for IPv6";
+  }
+
+  identity ACL_MIXED {
+    base acl-type;
+    description
+      "Mixed Access Control List for IPv4 and IPv6";
+  }
+
+  identity actions-base {
+    description
+      "Base identity for ACL actions";
+  }
+
+  identity ACCEPT {
+    base actions-base;
+    description
+      "Accept the packet";
+  }
+
+  identity DROP {
+    base actions-base;
+    description
+      "Drop the packet without notification";
+  }
+
+  identity REJECT {
+    base actions-base;
+    description
+      "Drop the packet and send notification";
+  }
+
+  identity REDIRECT {
+    base actions-base;
+    description
+      "Redirect packet to a different target";
+  }
+
+  grouping acl-config {
+    description
+      "Configuration parameters for ACLs";
+
+    leaf name acl-type {
+      type identityref {
+        base acl-type;
+      }
+      description
+        "Type of ACL";
+    }
+
+    leaf description {
+      type string;
+      description
+        "Description of ACL";
+    }
+  }
+
+  grouping acl-entries-config {
+    description
+      "Configuration parameters for ACL entries";
+
+    leaf sequence-id {
+      type uint32 {
+        range "1..4294967295";
+      }
+      description
+        "Sequence number of ACL entry";
+    }
+
+    leaf description {
+      type string;
+      description
+        "Description of ACL entry";
+    }
+  }
+
+  grouping ip-protocol-fields-config {
+    description
+      "Config fields for IP protocol match";
+
+    leaf protocol-identifier {
+      type oc-pkt-match:ip-protocol-type;
+      description
+        "Value of the IPv4 protocol or IPv6 next-header
+        field";
+    }
+  }
+
+  grouping l4-config {
+    description
+      "Configuration of L4 match fields";
+
+    uses ip-protocol-fields-config;
+  }
+
+  grouping transport-fields-config {
+    description
+      "Configuration of transport fields";
+
+    leaf source-port {
+      type oc-pkt-match:port-number-or-operator;
+      description
+        "Source port or range";
+    }
+
+    leaf destination-port {
+      type oc-pkt-match:port-number-or-operator;
+      description
+        "Destination port or range";
+    }
+  }
+
+  grouping actions-config {
+    description
+      "Configuration of ACL action";
+
+    leaf forwarding-action {
+      type identityref {
+        base actions-base;
+      }
+      mandatory true;
+      description
+        "Action to take on packet that matches the ACL rule";
+    }
+  }
+
+  container acl {
+    description
+      "Top-level container for Access Control Lists";
+
+    container state {
+      config false;
+      description
+        "Operational state for ACLs";
+
+      leaf acl-capability {
+        type string;
+        description
+          "Hardware ACL capabilities";
+      }
+
+      leaf active-count {
+        type uint32;
+        description
+          "Number of ACLs currently active on device";
+      }
+    }
+
+    container acl-sets {
+      description
+        "Access Control Lists (ACLs)";
+
+      list acl-set {
+        key "name type";
+
+        description
+          "An ACL set is a named ACL containing an
+          ordered set of rules that are evaluated
+          sequentially";
+
+        leaf name {
+          type leafref {
+            path "../config/name";
+          }
+          description
+            "Reference to ACL set name";
+        }
+
+        leaf type {
+          type leafref {
+            path "../config/type";
+          }
+          description
+            "Reference to ACL set type";
+        }
+
+        container config {
+          description
+            "Configuration parameters for ACL set";
+
+          uses acl-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state for ACL set";
+
+          uses acl-config;
+        }
+
+        container acls {
+          description
+            "Access Control List entries";
+
+          list acl {
+            key "sequence-id";
+
+            description
+              "List of ACL entries";
+
+            leaf sequence-id {
+              type leafref {
+                path "../config/sequence-id";
+              }
+              description
+                "Reference to ACL entry sequence ID";
+            }
+
+            container config {
+              description
+                "Configuration for ACL entry";
+
+              uses acl-entries-config;
+            }
+
+            container state {
+              config false;
+              description
+                "Operational state for ACL entry";
+
+              uses acl-entries-config;
+            }
+
+            container input-interface {
+              description
+                "Match fields referencing the input interface
+                of the packet";
+
+              container config {
+                description
+                  "Configuration for input interface match";
+
+                leaf interface-ref {
+                  type string;
+                  description
+                    "Reference to the base interface for the
+                    ACL match";
+                }
+              }
+            }
+
+            container transport {
+              description
+                "Match fields on L4 transport protocol";
+
+              container config {
+                description
+                  "Configuration for transport match";
+
+                uses l4-config;
+                uses transport-fields-config;
+              }
+            }
+
+            container actions {
+              description
+                "Action to take for packets matching the ACL
+                entry";
+
+              container config {
+                description
+                  "Configuration for ACL action";
+
+                uses actions-config;
+              }
+
+              container state {
+                config false;
+                description
+                  "Operational state for ACL action";
+
+                uses actions-config;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  grouping interface-acl-entries-config {
+    description
+      "Configuration data for per-interface ACLs";
+
+    leaf ingress-acl-sets {
+      type string;
+      description
+        "List of ACLs applied on ingress";
+    }
+
+    leaf egress-acl-sets {
+      type string;
+      description
+        "List of ACLs applied on egress";
+    }
+  }
+ }
+}

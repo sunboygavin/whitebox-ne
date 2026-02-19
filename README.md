@@ -41,6 +41,7 @@ sudo vtysh
 | **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 (已原生支持华为风格 CLI) |
 | **管理接口** | Net-SNMP | SNMPv2c/v3 | SNMP AgentX | 通过 AgentX 扩展 FRR MIB |
 | **配置接口** | Sysrepo/Netopeer2 | Netconf/YANG | SSH (Netconf) | 需手动编译安装，详见 `netconf_guide.md` |
+| **OpenConfig 支持** | Sysrepo/Netopeer2 | Netconf/gNMI | YANG Models | 标准化配置接口，详见 `OPENCONFIG_GUIDE.md` |
 | **转发面** | Linux Kernel | IPv4/IPv6 | - | 依赖 Linux 内核转发能力 |
 
 ---
@@ -398,12 +399,22 @@ Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译
 
 ## 🔗 参考资源
 
+### 核心技术
 - [FRRouting 官方文档](https://docs.frr.org/)
 - [Net-SNMP 官方文档](http://www.net-snmp.org/)
 - [Docker 官方文档](https://docs.docker.com/)
 - [华为 VRP 命令参考](https://support.huawei.com/enterprise/)
 
+### OpenConfig 相关
+- [OpenConfig 官网](https://openconfig.net/)
+- [OpenConfig GitHub](https://github.com/openconfig)
+- [Sysrepo 文档](https://github.com/sysrepo/sysrepo)
+- [Netopeer2 文档](https://github.com/sysrepo/netopeer2)
+- [YANG 模型库](https://github.com/YangModels/yang)
+
 ---
+
+## 🎉 部署成功！
 
 **部署成功！** 🎉
 

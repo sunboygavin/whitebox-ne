@@ -1,0 +1,453 @@
+module openconfig-interfaces {
+  yang-version "1.1";
+
+  namespace "http://openconfig.net/yang/interfaces";
+  prefix "oc-if";
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  organization "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module describes a collection of interfaces and subinterfaces.
+
+    The module can be used to expose physical interfaces, logical
+    interfaces, and subinterfaces.  It can be augmented to provide
+    additional configuration or operational data associated with
+    interfaces.
+
+    For a detailed example of how the model is used, see the
+    OpenConfig public documentation and the OpenConfig website:
+
+    https://openconfig.net
+
+    Portions of this code were derived from IETF RFC 7223.
+    Please reproduce this note if possible.
+
+    IETF RFC 7223:
+    Copyright (c) 2014 IETF Trust and the persons identified as
+    authors of the code.  All rights reserved.
+
+    Redistribution and use in source and binary forms, with or
+    without modification, is permitted pursuant to, and subject to
+    the license terms contained in, the Simplified BSD License set
+    forth in Section 4.c of the IETF Trust's Legal Provisions
+    Relating to IETF Documents
+    (http://trustee.ietf.org/license-info).
+
+    This version of this YANG module is part of OpenConfig profile;
+    see the OpenConfig website for more information
+    (http://www.openconfig.net).";
+
+  revision "2019-05-03" {
+    description
+      "Update when statement to match IETF model.";
+    reference "v0.4.2";
+  }
+
+  grouping interface-config {
+    description
+      "Configuration data for interfaces";
+
+    leaf name {
+      type string;
+      description
+        "The name of the interface.
+
+        A device MAY restrict the allowed values for this leaf,
+        possibly depending on the type of the interface.
+        For example, for an Ethernet interface, the name might be
+        eth0 or eth1, or it might be swp0 or swp1.
+
+        The client MUST check that the interface exists before
+        configuring other parameters associated with that interface.";
+    }
+
+    leaf description {
+      type string;
+      description
+        "A textual description of the interface.
+
+        A server implementation MAY map this leaf to the ifAlias
+        MIB object.  Such an implementation needs to use some
+        mechanism to handle the differences in size and
+        characters allowed between this leaf and ifAlias.  The
+        definition of such a mechanism is outside the scope of
+        this document.
+
+        Since ifAlias is defined to be a string that is 0..255
+        octets in length, the NETCONF/YANG encoding of
+        description uses the string type.";
+    }
+
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "This leaf contains the configured, desired state of the
+        interface.
+
+        If this leaf is set to true when the interface is
+        administratively disabled (no shutdown), the interface
+        should be enabled (no shutdown). If this leaf is set to
+        false when the interface is enabled (no shutdown), the
+        interface should be administratively disabled (shutdown).";
+    }
+
+    leaf type {
+      type identityref {
+        base ietf-if:interface-type;
+      }
+      description
+        "The type of the interface.
+
+        When an interface entry is created, a server MAY
+        initialize the type leaf with a valid value, e.g., if it
+        is possible to derive the type from the interface name.
+
+        If the GET operation returns a value for the type leaf,
+        the client MUST use that value when the interface entry is
+        used as a reference node (e.g., in a leafref).";
+
+      reference
+        "RFC 7223: A YANG Data Model for Interface Management";
+    }
+  }
+
+  grouping interface-state {
+    description
+      "Operational state data for interfaces";
+
+    leaf oper-status {
+      type enumeration {
+        enum UP {
+          value 1;
+          description
+            "Ready to pass packets.";
+        }
+        enum DOWN {
+          value 2;
+          description
+            "Interface cannot pass packets.";
+        }
+        enum TESTING {
+          value 3;
+          description
+            "Interface in test mode.";
+        }
+        enum UNKNOWN {
+          value 4;
+          description
+            "Status cannot be determined.";
+        }
+        enum DORMANT {
+          value 5;
+          description
+            "Waiting for external event.";
+        }
+        enum NOT_PRESENT {
+          value 6;
+          description
+            "Interface not present.";
+        }
+        enum LOWER_LAYER_DOWN {
+          value 7;
+          description
+            "Interface down due to state of lower-layer interface.";
+        }
+      }
+      description
+        "The operational state of the interface.
+
+        This leaf has the same semantics as ifOperStatus from
+        RFC 2863.";
+      reference
+        "RFC 2863: The Interfaces Group MIB";
+    }
+
+    leaf last-change {
+      type yang:date-and-time;
+      description
+        "The timestamp of the last state change of the interface
+        (e.g., up, down, administrative change).";
+      reference
+        "RFC 7223: A YANG Data Model for Interface Management";
+    }
+
+    leaf if-index {
+      type int32;
+      description
+        "This is the ifIndex value as described in RFC 7223.
+
+        A server implementation MAY map this leaf to the ifIndex
+        MIB object.  The definition of such a mapping is outside
+        the scope of this document.
+
+        Since ifIndex is defined to be an integer between 1
+        and 2147483647, and has a defined semantics with regard
+        to interface indexes, the NETCONF/Y encoding of the
+        ifIndex uses the int32 type.";
+      reference
+        "RFC 7223: A YANG Data Model for Interface Management
+        RFC 2863: The Interfaces Group MIB";
+    }
+
+    leaf admin-status {
+      type enumeration {
+        enum UP {
+          value 1;
+          description
+            "Ready to pass packets.";
+        }
+        enum DOWN {
+          value 2;
+          description
+            "Not ready to pass packets.";
+        }
+      }
+      description
+        "The desired state of the interface.
+
+        This leaf has the same semantics as ifAdminStatus from
+        MIB-II.";
+      reference
+        "RFC 2863: The Interfaces Group MIB";
+    }
+
+    leaf speed {
+      type uint64;
+      units "bps";
+      description
+        "Estimates the current interface bandwidth in bits per
+        second.  For interfaces that do not vary in bandwidth
+        or for those where no accurate estimation can be made,
+        this node should contain the nominal bandwidth.";
+    }
+
+    leaf counters {
+      type uint64;
+      description
+        "Packet counters";
+    }
+  }
+
+  grouping interface-counters-state {
+    description
+      "Operational state representing packet and byte counters
+      for an interface.  These counters are typically provided
+      by the interface driver or hardware.";
+
+    leaf in-octets {
+      type yang:counter64;
+      description
+        "The total number of octets received on the interface,
+        including framing characters.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCInOctets";
+    }
+
+    leaf in-unicast-pkts {
+      type yang:counter64;
+      description
+        "The total number of unicast packets received on the
+        interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCInUcastPkts";
+    }
+
+    leaf in-broadcast-pkts {
+      type yang:counter64;
+      description
+        "The total number of broadcast packets received on the
+        interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCInBroadcastPkts";
+    }
+
+    leaf in-multicast-pkts {
+      type yang:counter64;
+      description
+        "The total number of multicast packets received on the
+        interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCInMulticastPkts";
+    }
+
+    leaf in-discards {
+      type yang:counter64;
+      description
+        "The number of inbound packets that were chosen to be
+        discarded even though no errors had been detected to
+        prevent their being deliverable to a higher-layer
+        protocol.  One possible reason for discarding such a
+        packet could be to free up buffer space.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifInDiscards";
+    }
+
+    leaf in-errors {
+      type yang:counter64;
+      description
+        "For packet-oriented interfaces, the number of inbound
+        packets that contained errors preventing them from
+        being deliverable to a higher-layer protocol.  For
+        character-oriented or fixed-length interfaces, the
+        number of inbound transmission units that contained
+        errors preventing them from being deliverable to a
+        higher-layer protocol.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifInErrors";
+    }
+
+    leaf in-unknown-protos {
+      type yang:counter64;
+      description
+        "For packet-oriented interfaces, the number of packets
+        received via the interface that were discarded because
+        of an unknown or unsupported protocol.  For
+        character-oriented or fixed-length interfaces, the
+        number of transmission units received via the interface
+        that were discarded because of an unknown or unsupported
+        protocol.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifInUnknownProtos";
+    }
+
+    leaf out-octets {
+      type yang:counter64;
+      description
+        "The total number of octets transmitted out of the
+        interface, including framing characters.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCOutOctets";
+    }
+
+    leaf out-unicast-pkts {
+      type yang:counter64;
+      description
+        "The total number of unicast packets transmitted out of
+        the interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCOutUcastPkts";
+    }
+
+    leaf out-broadcast-pkts {
+      type yang:counter64;
+      description
+        "The total number of broadcast packets transmitted out of
+        the interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCOutBroadcastPkts";
+    }
+
+    leaf out-multicast-pkts {
+      type yang:counter64;
+      description
+        "The total number of multicast packets transmitted out of
+        the interface.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifHCOutMulticastPkts";
+    }
+
+    leaf out-discards {
+      type yang:counter64;
+      description
+        "The number of outbound packets that were chosen to be
+        discarded even though no errors had been detected to
+        prevent their being transmitted.  One possible reason
+        for discarding such a packet could be to free up buffer
+        space.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifOutDiscards";
+    }
+
+    leaf out-errors {
+      type yang:counter64;
+      description
+        "For packet-oriented interfaces, the number of outbound
+        packets that could not be transmitted because of errors.
+        For character-oriented or fixed-length interfaces, the
+        number of outbound transmission units that could not be
+        transmitted because of errors.";
+      reference
+        "RFC 2863: The Interfaces Group MIB -
+        ifOutErrors";
+    }
+
+    leaf last-clear {
+      type yang:date-and-time;
+      description
+        "Timestamp of the last time the interface counters were
+        cleared.";
+    }
+  }
+
+  container interfaces {
+    description
+      "Top-level container for interface configuration and
+      operational state data.";
+
+    list interface {
+      key "name";
+
+      description
+        "The list of configured interfaces on the device.
+
+        The state of each interface must reflect the configured
+        parameters and the operational state of the interface.";
+
+      leaf name {
+        type leafref {
+          path "../config/name";
+        }
+        description
+          "References the configured name of the interface";
+      }
+
+      container config {
+        description
+          "Configuration parameters for the interface";
+
+        uses interface-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state parameters for the interface";
+
+        uses interface-config;
+        uses interface-state;
+      }
+
+      container counters {
+        config false;
+        description
+          "A collection of interface-related statistics objects.";
+
+        uses interface-counters-state;
+      }
+    }
+  }
+}
