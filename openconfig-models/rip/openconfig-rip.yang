@@ -1,0 +1,389 @@
+module openconfig-rip {
+  yang-version "1.1";
+  namespace "http://openconfig.net/yang/rip";
+  prefix "oc-rip";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+     www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+     for the RIP (Routing Information Protocol) routing protocol.";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision "2026-02-20" {
+    description
+      "Initial RIP model for Huawei VRP compatibility";
+    reference "0.1.0";
+  }
+
+  grouping rip-global-config {
+    description
+      "Global configuration parameters for RIP";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Enable or disable RIP routing protocol";
+    }
+
+    leaf version {
+      type uint8 {
+        range "1..2";
+      }
+      default 2;
+      description
+        "RIP protocol version (1 or 2)";
+    }
+
+    leaf default-metric {
+      type uint8 {
+        range "1..16";
+      }
+      default 1;
+      description
+        "Default metric for redistributed routes";
+    }
+
+    leaf update-interval {
+      type uint16;
+      units "seconds";
+      default 30;
+      description
+        "Interval between routing updates";
+    }
+
+    leaf timeout-interval {
+      type uint16;
+      units "seconds";
+      default 180;
+      description
+        "Route timeout interval";
+    }
+
+    leaf garbage-collection-interval {
+      type uint16;
+      units "seconds";
+      default 120;
+      description
+        "Garbage collection interval for invalid routes";
+    }
+  }
+
+  grouping rip-network-config {
+    description
+      "Configuration for RIP network statements";
+
+    leaf network {
+      type string;
+      description
+        "Network address to enable RIP on";
+    }
+  }
+
+  grouping rip-interface-config {
+    description
+      "Per-interface RIP configuration";
+
+    leaf interface-name {
+      type string;
+      description
+        "Reference to the interface name";
+    }
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "Enable RIP on this interface";
+    }
+
+    leaf passive {
+      type boolean;
+      default false;
+      description
+        "Configure interface as passive (no RIP updates sent)";
+    }
+
+    leaf authentication-mode {
+      type enumeration {
+        enum NONE {
+          description "No authentication";
+        }
+        enum SIMPLE {
+          description "Simple password authentication";
+        }
+        enum MD5 {
+          description "MD5 authentication";
+        }
+      }
+      default NONE;
+      description
+        "Authentication mode for RIP updates";
+    }
+
+    leaf authentication-key {
+      type string;
+      description
+        "Authentication key or password";
+    }
+
+    leaf split-horizon {
+      type boolean;
+      default true;
+      description
+        "Enable split horizon";
+    }
+
+    leaf poison-reverse {
+      type boolean;
+      default false;
+      description
+        "Enable poison reverse";
+    }
+  }
+
+  grouping rip-neighbor-state {
+    description
+      "Operational state for RIP neighbors";
+
+    leaf neighbor-address {
+      type string;
+      description
+        "IP address of the RIP neighbor";
+    }
+
+    leaf last-update {
+      type uint32;
+      units "seconds";
+      description
+        "Time since last update from this neighbor";
+    }
+
+    leaf bad-packets {
+      type uint32;
+      description
+        "Number of bad packets received from this neighbor";
+    }
+
+    leaf bad-routes {
+      type uint32;
+      description
+        "Number of bad routes received from this neighbor";
+    }
+  }
+
+  grouping rip-route-state {
+    description
+      "Operational state for RIP routes";
+
+    leaf destination {
+      type string;
+      description
+        "Destination network";
+    }
+
+    leaf next-hop {
+      type string;
+      description
+        "Next hop address";
+    }
+
+    leaf metric {
+      type uint8;
+      description
+        "Route metric";
+    }
+
+    leaf interface {
+      type string;
+      description
+        "Outgoing interface";
+    }
+
+    leaf route-tag {
+      type uint16;
+      description
+        "Route tag";
+    }
+
+    leaf timeout {
+      type uint32;
+      units "seconds";
+      description
+        "Time until route expires";
+    }
+  }
+
+  container rip {
+    description
+      "Top-level container for RIP configuration and state";
+
+    container global {
+      description
+        "Global RIP configuration and state";
+
+      container config {
+        description
+          "Global RIP configuration";
+        uses rip-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Global RIP operational state";
+        uses rip-global-config;
+
+        leaf routes-count {
+          type uint32;
+          description
+            "Total number of RIP routes";
+        }
+
+        leaf neighbors-count {
+          type uint32;
+          description
+            "Total number of RIP neighbors";
+        }
+      }
+    }
+
+    container networks {
+      description
+        "RIP network configuration";
+
+      list network {
+        key "network";
+        description
+          "List of networks to enable RIP on";
+
+        leaf network {
+          type leafref {
+            path "../config/network";
+          }
+          description
+            "Reference to network address";
+        }
+
+        container config {
+          description
+            "Network configuration";
+          uses rip-network-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Network operational state";
+          uses rip-network-config;
+        }
+      }
+    }
+
+    container interfaces {
+      description
+        "Per-interface RIP configuration";
+
+      list interface {
+        key "interface-name";
+        description
+          "List of interfaces with RIP configuration";
+
+        leaf interface-name {
+          type leafref {
+            path "../config/interface-name";
+          }
+          description
+            "Reference to interface name";
+        }
+
+        container config {
+          description
+            "Interface RIP configuration";
+          uses rip-interface-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Interface RIP operational state";
+          uses rip-interface-config;
+
+          leaf packets-sent {
+            type uint64;
+            description
+              "Number of RIP packets sent on this interface";
+          }
+
+          leaf packets-received {
+            type uint64;
+            description
+              "Number of RIP packets received on this interface";
+          }
+        }
+      }
+    }
+
+    container neighbors {
+      config false;
+      description
+        "RIP neighbor information";
+
+      list neighbor {
+        key "neighbor-address";
+        description
+          "List of RIP neighbors";
+
+        leaf neighbor-address {
+          type leafref {
+            path "../state/neighbor-address";
+          }
+          description
+            "Reference to neighbor address";
+        }
+
+        container state {
+          description
+            "Neighbor operational state";
+          uses rip-neighbor-state;
+        }
+      }
+    }
+
+    container routes {
+      config false;
+      description
+        "RIP routing table";
+
+      list route {
+        key "destination";
+        description
+          "List of RIP routes";
+
+        leaf destination {
+          type leafref {
+            path "../state/destination";
+          }
+          description
+            "Reference to destination network";
+        }
+
+        container state {
+          description
+            "Route operational state";
+          uses rip-route-state;
+        }
+      }
+    }
+  }
+}

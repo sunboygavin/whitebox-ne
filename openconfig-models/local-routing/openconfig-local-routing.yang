@@ -1,0 +1,268 @@
+module openconfig-local-routing {
+  yang-version "1";
+  namespace "http://openconfig.net/yang/local-routing";
+  prefix "oc-loc-rt";
+
+  import ietf-inet-types { prefix inet; }
+  import openconfig-extensions { prefix oc-ext; }
+
+  organization "OpenConfig working group";
+  contact "OpenConfig working group www.openconfig.net";
+
+  description
+    "This module describes configuration and operational state
+    data for routes that are locally generated, i.e., not created by
+    dynamic routing protocols.  These include static routes, locally
+    created aggregate routes for reducing the number of constituent
+    routes that must be advertised, summary routes for IGPs, etc.
+
+    This model expresses locally generated routes as generically as
+    possible, avoiding configuration of protocol-specific attributes
+    at the time of route creation.  This is primarily to avoid
+    assumptions about how underlying router implementations handle
+    route attributes in various routing table data structures they
+    maintain.  Hence, the definition of locally generated routes
+    essentially creates 'bare' routes that do not have any protocol-
+    specific attributes.
+
+    When protocol-specific attributes must be attached to a route
+    (e.g., communities on a locally defined route meant to be
+    advertised via BGP), the attributes should be attached via a
+    protocol-specific policy after importing the route into the
+    protocol for distribution (again via routing policy).";
+
+  oc-ext:openconfig-version "2.0.0";
+
+  revision "2020-03-24" {
+    description
+      "Clarify usage of interface-ref.";
+    reference "2.0.0";
+  }
+
+  revision "2018-11-21" {
+    description
+      "Add OpenConfig module metadata extensions.";
+    reference "1.1.0";
+  }
+
+  revision "2017-05-15" {
+    description
+      "Update to OpenConfig types; add NEXT_HOP_ADDRESS next-hop type.";
+    reference "1.0.0";
+  }
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  // grouping statements
+
+  grouping local-static-config {
+    description
+      "Configuration data for static routes.";
+
+    leaf prefix {
+      type inet:ip-prefix;
+      description
+        "Destination prefix for the static route, either IPv4 or
+        IPv6.";
+    }
+
+    leaf-list next-hop {
+      type union {
+        type inet:ip-address;
+        type string;
+      }
+      description
+        "The next-hop that is to be used for the static route
+        - this may be specified as an IP address, an interface
+        or a pre-defined next-hop type - for instance, DROP or
+        LOCAL_LINK. When this leaf-list is empty, the static route
+        is considered to be a 'null' route.";
+    }
+
+    leaf metric {
+      type uint32;
+      default 1;
+      description
+        "A metric which is utilized to specify the preference of
+        the static route, when it is compared to other routes
+        within the routing table.  Routes with a lower metric
+        are more preferred than those with higher metric.";
+    }
+
+    leaf set-tag {
+      type uint32;
+      description
+        "Set a generic tag value on the route. This tag can be
+        used for filtering routes that are distributed to other
+        routing protocols.";
+    }
+  }
+
+  grouping local-static-state {
+    description
+      "Operational state data for static routes";
+  }
+
+  grouping local-static-top {
+    description
+      "Top-level grouping for the list of static route definitions";
+
+    container static-routes {
+      description
+        "Enclosing container for the list of static routes";
+
+      list static {
+        key "prefix";
+        description
+          "List of locally configured static routes";
+
+        leaf prefix {
+          type leafref {
+            path "../config/prefix";
+          }
+          description
+            "Reference to the destination prefix list key.";
+        }
+
+        container config {
+          description
+            "Configuration data for static routes";
+
+          uses local-static-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for static routes";
+
+          uses local-static-config;
+          uses local-static-state;
+        }
+      }
+    }
+  }
+
+  grouping local-aggregate-config {
+    description
+      "Configuration data for aggregate routes";
+
+    leaf prefix {
+      type inet:ip-prefix;
+      description
+        "Aggregate prefix to be advertised";
+    }
+
+    leaf discard {
+      type boolean;
+      default false;
+      description
+        "When true, install the aggregate route with a discard
+        next-hop -- traffic destined to the aggregate will be
+        discarded with no ICMP message generated.  When false,
+        traffic destined to an aggregate address when no
+        constituent routes are present will generate an ICMP
+        unreachable message.";
+    }
+
+    leaf set-tag {
+      type uint32;
+      description
+        "Set a generic tag value on the route. This tag can be
+        used for filtering routes that are distributed to other
+        routing protocols.";
+    }
+  }
+
+  grouping local-aggregate-state {
+    description
+      "Operational state data for local aggregate advertisement
+      definitions";
+  }
+
+  grouping local-aggregate-top {
+    description
+      "Top-level grouping for local aggregates";
+
+    container aggregate-routes {
+      description
+        "Enclosing container for locally-defined aggregate
+        routes";
+
+      list aggregate {
+        key "prefix";
+        description
+          "List of aggregates";
+
+        leaf prefix {
+          type leafref {
+            path "../config/prefix";
+          }
+          description
+            "Reference to the configured prefix for this aggregate";
+        }
+
+        container config {
+          description
+            "Configuration data for aggregate advertisements";
+
+          uses local-aggregate-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Operational state data for aggregate
+            advertisements";
+
+          uses local-aggregate-config;
+          uses local-aggregate-state;
+        }
+      }
+    }
+  }
+
+  grouping local-routes-config {
+    description
+      "Configuration data for locally defined routes";
+  }
+
+  grouping local-routes-state {
+    description
+      "Operational state data for locally defined routes";
+  }
+
+  grouping local-routes-top {
+    description
+      "Top level container for local routes";
+
+    container local-routes {
+      description
+        "Top-level container for local routes";
+
+      container config {
+        description
+          "Configuration data for locally defined routes";
+
+        uses local-routes-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Operational state data for locally defined routes";
+
+        uses local-routes-config;
+        uses local-routes-state;
+      }
+
+      uses local-static-top;
+      uses local-aggregate-top;
+    }
+  }
+
+  uses local-routes-top;
+}
