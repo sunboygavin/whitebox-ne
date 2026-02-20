@@ -258,6 +258,94 @@ else
     test_result "OSPF bandwidth reference implemented" 1
 fi
 
+# Test 28: Check BGP enhanced implementation
+echo "Test 28: Checking BGP enhanced features..."
+if [ -f "src/frr_core/bgpd/bgp_huawei.c" ]; then
+    test_result "BGP enhanced implementation exists" 0
+else
+    test_result "BGP enhanced implementation exists" 1
+fi
+
+# Test 29: Check BGP route reflector support
+echo "Test 29: Checking BGP route reflector..."
+if grep -q "route_reflector_client" src/frr_core/bgpd/bgp_huawei.c 2>/dev/null; then
+    test_result "BGP route reflector implemented" 0
+else
+    test_result "BGP route reflector implemented" 1
+fi
+
+# Test 30: Check BGP confederation support
+echo "Test 30: Checking BGP confederation..."
+if grep -q "confederation" src/frr_core/bgpd/bgp_huawei.c 2>/dev/null; then
+    test_result "BGP confederation implemented" 0
+else
+    test_result "BGP confederation implemented" 1
+fi
+
+# Test 31: Check BGP route policy support
+echo "Test 31: Checking BGP route policy..."
+if grep -q "route-policy" src/frr_core/bgpd/bgp_huawei.c 2>/dev/null; then
+    test_result "BGP route policy implemented" 0
+else
+    test_result "BGP route policy implemented" 1
+fi
+
+# Test 32: Check BGP aggregation support
+echo "Test 32: Checking BGP aggregation..."
+if grep -q "aggregate" src/frr_core/bgpd/bgp_huawei.c 2>/dev/null; then
+    test_result "BGP aggregation implemented" 0
+else
+    test_result "BGP aggregation implemented" 1
+fi
+
+# Test 33: Check BGP community support
+echo "Test 33: Checking BGP community..."
+if grep -q "advertise-community" src/frr_core/bgpd/bgp_huawei.c 2>/dev/null; then
+    test_result "BGP community support implemented" 0
+else
+    test_result "BGP community support implemented" 1
+fi
+
+# Test 34: Check policy routing implementation
+echo "Test 34: Checking policy routing..."
+if [ -f "src/frr_core/zebra/policy_route.c" ]; then
+    test_result "Policy routing implementation exists" 0
+else
+    test_result "Policy routing implementation exists" 1
+fi
+
+# Test 35: Check policy match conditions
+echo "Test 35: Checking policy match conditions..."
+if grep -q "if-match" src/frr_core/zebra/policy_route.c 2>/dev/null; then
+    test_result "Policy match conditions implemented" 0
+else
+    test_result "Policy match conditions implemented" 1
+fi
+
+# Test 36: Check policy apply actions
+echo "Test 36: Checking policy apply actions..."
+if grep -q "apply" src/frr_core/zebra/policy_route.c 2>/dev/null; then
+    test_result "Policy apply actions implemented" 0
+else
+    test_result "Policy apply actions implemented" 1
+fi
+
+# Test 37: Check policy ACL matching
+echo "Test 37: Checking policy ACL matching..."
+if grep -q "match_acl" src/frr_core/zebra/policy_route.c 2>/dev/null; then
+    test_result "Policy ACL matching implemented" 0
+else
+    test_result "Policy ACL matching implemented" 1
+fi
+
+# Test 38: Check policy next-hop action
+echo "Test 38: Checking policy next-hop action..."
+if grep -q "apply_nexthop" src/frr_core/zebra/policy_route.c 2>/dev/null; then
+    test_result "Policy next-hop action implemented" 0
+else
+    test_result "Policy next-hop action implemented" 1
+fi
+
 echo ""
 echo "========================================="
 echo "Test Summary"
