@@ -162,6 +162,102 @@ else
     test_result "Route tagging implemented" 1
 fi
 
+# Test 16: Check if IS-IS files exist
+echo "Test 16: Checking IS-IS implementation..."
+if [ -f "src/frr_core/isisd/isis_huawei.c" ] && [ -f "openconfig-models/isis/openconfig-isis.yang" ]; then
+    test_result "IS-IS implementation exists" 0
+else
+    test_result "IS-IS implementation exists" 1
+fi
+
+# Test 17: Check IS-IS YANG model structure
+echo "Test 17: Checking IS-IS YANG model..."
+if grep -q "isis-global-config" openconfig-models/isis/openconfig-isis.yang 2>/dev/null; then
+    test_result "IS-IS YANG model structure correct" 0
+else
+    test_result "IS-IS YANG model structure correct" 1
+fi
+
+# Test 18: Check IS-IS command implementation
+echo "Test 18: Checking IS-IS commands..."
+if grep -q "cmd_isis" src/frr_core/isisd/isis_huawei.c 2>/dev/null; then
+    test_result "IS-IS commands implemented" 0
+else
+    test_result "IS-IS commands implemented" 1
+fi
+
+# Test 19: Check IS-IS NET configuration
+echo "Test 19: Checking IS-IS NET support..."
+if grep -q "network-entity" src/frr_core/isisd/isis_huawei.c 2>/dev/null; then
+    test_result "IS-IS NET configuration implemented" 0
+else
+    test_result "IS-IS NET configuration implemented" 1
+fi
+
+# Test 20: Check IS-IS level support
+echo "Test 20: Checking IS-IS level support..."
+if grep -q "is-level" src/frr_core/isisd/isis_huawei.c 2>/dev/null; then
+    test_result "IS-IS level support implemented" 0
+else
+    test_result "IS-IS level support implemented" 1
+fi
+
+# Test 21: Check OSPF enhanced implementation
+echo "Test 21: Checking OSPF enhanced features..."
+if [ -f "src/frr_core/ospfd/ospf_huawei.c" ]; then
+    test_result "OSPF enhanced implementation exists" 0
+else
+    test_result "OSPF enhanced implementation exists" 1
+fi
+
+# Test 22: Check OSPF NSSA support
+echo "Test 22: Checking OSPF NSSA support..."
+if grep -q "OSPF_AREA_NSSA" src/frr_core/ospfd/ospf_huawei.c 2>/dev/null; then
+    test_result "OSPF NSSA support implemented" 0
+else
+    test_result "OSPF NSSA support implemented" 1
+fi
+
+# Test 23: Check OSPF virtual link support
+echo "Test 23: Checking OSPF virtual link..."
+if grep -q "vlink" src/frr_core/ospfd/ospf_huawei.c 2>/dev/null; then
+    test_result "OSPF virtual link implemented" 0
+else
+    test_result "OSPF virtual link implemented" 1
+fi
+
+# Test 24: Check OSPF authentication
+echo "Test 24: Checking OSPF authentication..."
+if grep -q "authentication-mode" src/frr_core/ospfd/ospf_huawei.c 2>/dev/null; then
+    test_result "OSPF authentication implemented" 0
+else
+    test_result "OSPF authentication implemented" 1
+fi
+
+# Test 25: Check OSPF stub area support
+echo "Test 25: Checking OSPF stub area..."
+if grep -q "OSPF_AREA_STUB" src/frr_core/ospfd/ospf_huawei.c 2>/dev/null; then
+    test_result "OSPF stub area implemented" 0
+else
+    test_result "OSPF stub area implemented" 1
+fi
+
+# Test 26: Check OSPF filter policy
+echo "Test 26: Checking OSPF filter policy..."
+if grep -q "filter-policy" src/frr_core/ospfd/ospf_huawei.c 2>/dev/null; then
+    test_result "OSPF filter policy implemented" 0
+else
+    test_result "OSPF filter policy implemented" 1
+fi
+
+# Test 27: Check OSPF bandwidth reference
+echo "Test 27: Checking OSPF bandwidth reference..."
+if grep -q "bandwidth-reference" src/frr_core/ospfd/ospf_huawei.c 2>/dev/null; then
+    test_result "OSPF bandwidth reference implemented" 0
+else
+    test_result "OSPF bandwidth reference implemented" 1
+fi
+
 echo ""
 echo "========================================="
 echo "Test Summary"

@@ -1,0 +1,523 @@
+module openconfig-isis {
+  yang-version "1.1";
+  namespace "http://openconfig.net/yang/isis";
+  prefix "oc-isis";
+
+  import openconfig-extensions { prefix oc-ext; }
+  import openconfig-interfaces { prefix oc-if; }
+
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+     www.openconfig.net";
+
+  description
+    "This module defines configuration and operational state data
+     for the IS-IS (Intermediate System to Intermediate System) routing protocol.";
+
+  oc-ext:openconfig-version "0.1.0";
+
+  revision "2026-02-20" {
+    description
+      "Initial IS-IS model for Huawei VRP compatibility";
+    reference "0.1.0";
+  }
+
+  grouping isis-global-config {
+    description
+      "Global configuration parameters for IS-IS";
+
+    leaf enabled {
+      type boolean;
+      default false;
+      description
+        "Enable or disable IS-IS routing protocol";
+    }
+
+    leaf level-type {
+      type enumeration {
+        enum LEVEL_1 {
+          description "Level-1 only";
+        }
+        enum LEVEL_2 {
+          description "Level-2 only";
+        }
+        enum LEVEL_1_2 {
+          description "Level-1-2 (both levels)";
+        }
+      }
+      default LEVEL_1_2;
+      description
+        "IS-IS level type";
+    }
+
+    leaf net {
+      type string;
+      description
+        "Network Entity Title (NET) - ISO address for this router";
+    }
+
+    leaf metric-style {
+      type enumeration {
+        enum NARROW {
+          description "Narrow metric (0-63)";
+        }
+        enum WIDE {
+          description "Wide metric (0-16777215)";
+        }
+        enum TRANSITION {
+          description "Support both narrow and wide";
+        }
+      }
+      default WIDE;
+      description
+        "Metric style for IS-IS";
+    }
+
+    leaf overload-bit {
+      type boolean;
+      default false;
+      description
+        "Set overload bit to avoid transit traffic";
+    }
+
+    leaf max-lsp-lifetime {
+      type uint16;
+      units "seconds";
+      default 1200;
+      description
+        "Maximum LSP lifetime";
+    }
+
+    leaf lsp-refresh-interval {
+      type uint16;
+      units "seconds";
+      default 900;
+      description
+        "LSP refresh interval";
+    }
+  }
+
+  grouping isis-interface-config {
+    description
+      "Per-interface IS-IS configuration";
+
+    leaf interface-name {
+      type string;
+      description
+        "Reference to the interface name";
+    }
+
+    leaf enabled {
+      type boolean;
+      default true;
+      description
+        "Enable IS-IS on this interface";
+    }
+
+    leaf circuit-type {
+      type enumeration {
+        enum LEVEL_1 {
+          description "Level-1 only";
+        }
+        enum LEVEL_2 {
+          description "Level-2 only";
+        }
+        enum LEVEL_1_2 {
+          description "Level-1-2 (both levels)";
+        }
+      }
+      default LEVEL_1_2;
+      description
+        "Circuit type for this interface";
+    }
+
+    leaf passive {
+      type boolean;
+      default false;
+      description
+        "Configure interface as passive (no IS-IS hellos sent)";
+    }
+
+    leaf metric-level-1 {
+      type uint32;
+      default 10;
+      description
+        "Metric for Level-1";
+    }
+
+    leaf metric-level-2 {
+      type uint32;
+      default 10;
+      description
+        "Metric for Level-2";
+    }
+
+    leaf hello-interval {
+      type uint16;
+      units "seconds";
+      default 10;
+      description
+        "Hello packet interval";
+    }
+
+    leaf hello-multiplier {
+      type uint8;
+      default 3;
+      description
+        "Hello multiplier for dead interval calculation";
+    }
+
+    leaf priority-level-1 {
+      type uint8;
+      default 64;
+      description
+        "DIS election priority for Level-1";
+    }
+
+    leaf priority-level-2 {
+      type uint8;
+      default 64;
+      description
+        "DIS election priority for Level-2";
+    }
+  }
+
+  grouping isis-area-config {
+    description
+      "IS-IS area configuration";
+
+    leaf area-address {
+      type string;
+      description
+        "IS-IS area address";
+    }
+  }
+
+  grouping isis-authentication-config {
+    description
+      "IS-IS authentication configuration";
+
+    leaf auth-mode {
+      type enumeration {
+        enum NONE {
+          description "No authentication";
+        }
+        enum SIMPLE {
+          description "Simple password authentication";
+        }
+        enum MD5 {
+          description "MD5 authentication";
+        }
+      }
+      default NONE;
+      description
+        "Authentication mode";
+    }
+
+    leaf auth-key {
+      type string;
+      description
+        "Authentication key";
+    }
+
+    leaf auth-type {
+      type enumeration {
+        enum AREA {
+          description "Area authentication";
+        }
+        enum DOMAIN {
+          description "Domain authentication";
+        }
+      }
+      description
+        "Authentication type";
+    }
+  }
+
+  grouping isis-neighbor-state {
+    description
+      "Operational state for IS-IS neighbors";
+
+    leaf system-id {
+      type string;
+      description
+        "System ID of the neighbor";
+    }
+
+    leaf interface {
+      type string;
+      description
+        "Interface connected to this neighbor";
+    }
+
+    leaf level {
+      type enumeration {
+        enum LEVEL_1 {
+          description "Level-1 adjacency";
+        }
+        enum LEVEL_2 {
+          description "Level-2 adjacency";
+        }
+      }
+      description
+        "Adjacency level";
+    }
+
+    leaf state {
+      type enumeration {
+        enum UP {
+          description "Adjacency is up";
+        }
+        enum DOWN {
+          description "Adjacency is down";
+        }
+        enum INIT {
+          description "Adjacency is initializing";
+        }
+      }
+      description
+        "Adjacency state";
+    }
+
+    leaf holdtime {
+      type uint16;
+      units "seconds";
+      description
+        "Remaining hold time";
+    }
+
+    leaf uptime {
+      type uint32;
+      units "seconds";
+      description
+        "Time since adjacency came up";
+    }
+  }
+
+  grouping isis-lsp-state {
+    description
+      "Operational state for IS-IS LSPs";
+
+    leaf lsp-id {
+      type string;
+      description
+        "LSP identifier";
+    }
+
+    leaf sequence-number {
+      type uint32;
+      description
+        "LSP sequence number";
+    }
+
+    leaf checksum {
+      type uint16;
+      description
+        "LSP checksum";
+    }
+
+    leaf remaining-lifetime {
+      type uint16;
+      units "seconds";
+      description
+        "Remaining LSP lifetime";
+    }
+
+    leaf level {
+      type enumeration {
+        enum LEVEL_1 {
+          description "Level-1 LSP";
+        }
+        enum LEVEL_2 {
+          description "Level-2 LSP";
+        }
+      }
+      description
+        "LSP level";
+    }
+  }
+
+  container isis {
+    description
+      "Top-level container for IS-IS configuration and state";
+
+    container global {
+      description
+        "Global IS-IS configuration and state";
+
+      container config {
+        description
+          "Global IS-IS configuration";
+        uses isis-global-config;
+      }
+
+      container state {
+        config false;
+        description
+          "Global IS-IS operational state";
+        uses isis-global-config;
+
+        leaf system-id {
+          type string;
+          description
+            "System ID derived from NET";
+        }
+
+        leaf adjacencies-count {
+          type uint32;
+          description
+            "Total number of adjacencies";
+        }
+
+        leaf lsp-count {
+          type uint32;
+          description
+            "Total number of LSPs in database";
+        }
+      }
+    }
+
+    container areas {
+      description
+        "IS-IS area configuration";
+
+      list area {
+        key "area-address";
+        description
+          "List of IS-IS areas";
+
+        leaf area-address {
+          type leafref {
+            path "../config/area-address";
+          }
+          description
+            "Reference to area address";
+        }
+
+        container config {
+          description
+            "Area configuration";
+          uses isis-area-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Area operational state";
+          uses isis-area-config;
+        }
+      }
+    }
+
+    container interfaces {
+      description
+        "Per-interface IS-IS configuration";
+
+      list interface {
+        key "interface-name";
+        description
+          "List of interfaces with IS-IS configuration";
+
+        leaf interface-name {
+          type leafref {
+            path "../config/interface-name";
+          }
+          description
+            "Reference to interface name";
+        }
+
+        container config {
+          description
+            "Interface IS-IS configuration";
+          uses isis-interface-config;
+        }
+
+        container state {
+          config false;
+          description
+            "Interface IS-IS operational state";
+          uses isis-interface-config;
+
+          leaf adjacencies {
+            type uint8;
+            description
+              "Number of adjacencies on this interface";
+          }
+        }
+
+        container authentication {
+          description
+            "Interface authentication configuration";
+
+          container config {
+            description
+              "Authentication configuration";
+            uses isis-authentication-config;
+          }
+
+          container state {
+            config false;
+            description
+              "Authentication operational state";
+            uses isis-authentication-config;
+          }
+        }
+      }
+    }
+
+    container neighbors {
+      config false;
+      description
+        "IS-IS neighbor information";
+
+      list neighbor {
+        key "system-id";
+        description
+          "List of IS-IS neighbors";
+
+        leaf system-id {
+          type leafref {
+            path "../state/system-id";
+          }
+          description
+            "Reference to neighbor system ID";
+        }
+
+        container state {
+          description
+            "Neighbor operational state";
+          uses isis-neighbor-state;
+        }
+      }
+    }
+
+    container lsp-database {
+      config false;
+      description
+        "IS-IS LSP database";
+
+      list lsp {
+        key "lsp-id";
+        description
+          "List of LSPs in the database";
+
+        leaf lsp-id {
+          type leafref {
+            path "../state/lsp-id";
+          }
+          description
+            "Reference to LSP ID";
+        }
+
+        container state {
+          description
+            "LSP operational state";
+          uses isis-lsp-state;
+        }
+      }
+    }
+  }
+}
