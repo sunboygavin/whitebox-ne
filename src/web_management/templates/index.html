@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>白盒网元管理界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .header .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.3rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #666;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s;
+        }
+
+        .nav-tab:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .nav-tab.active {
+            background: #667eea;
+            color: white;
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .output-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .command-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 1rem;
+        }
+
+        .command-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .nav-tabs {
+                overflow-x: auto;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 白盒网元管理界面</h1>
+        <div class="subtitle">WhiteBox Network Element Management</div>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('dashboard')">仪表盘</button>
+            <button class="nav-tab" onclick="switchTab('interfaces')">接口管理</button>
+            <button class="nav-tab" onclick="switchTab('routes')">路由表</button>
+            <button class="nav-tab" onclick="switchTab('ospf')">OSPF</button>
+            <button class="nav-tab" onclick="switchTab('bgp')">BGP</button>
+            <button class="nav-tab" onclick="switchTab('vrrp')">VRRP</button>
+            <button class="nav-tab" onclick="switchTab('config')">查看配置</button>
+            <button class="nav-tab" onclick="switchTab('config-edit')">配置编辑</button>
+            <button class="nav-tab" onclick="switchTab('command')">命令行</button>
+        </div>
+
+        <!-- 仪表盘 -->
+        <div id="dashboard" class="tab-content active">
+            <div class="card">
+                <div class="card-title">系统信息</div>
+                <div class="info-grid" id="system-info">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 接口管理 -->
+        <div id="interfaces" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    接口状态
+                    <button class="btn btn-primary" onclick="loadInterfaces()">刷新</button>
+                </div>
+                <div class="output-box" id="interfaces-output">点击刷新按钮加载接口信息</div>
+            </div>
+        </div>
+
+        <!-- 路由表 -->
+        <div id="routes" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    路由表
+                    <button class="btn btn-primary" onclick="loadRoutes()">刷新</button>
+                </div>
+                <div class="output-box" id="routes-output">点击刷新按钮加载路由信息</div>
+            </div>
+        </div>
+
+        <!-- OSPF -->
+        <div id="ospf" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    OSPF 邻居
+                    <button class="btn btn-primary" onclick="loadOSPF()">刷新</button>
+                </div>
+                <div class="output-box" id="ospf-output">点击刷新按钮加载 OSPF 信息</div>
+            </div>
+        </div>
+
+        <!-- BGP -->
+        <div id="bgp" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    BGP 摘要
+                    <button class="btn btn-primary" onclick="loadBGP()">刷新</button>
+                </div>
+                <div class="output-box" id="bgp-output">点击刷新按钮加载 BGP 信息</div>
+            </div>
+        </div>
+
+        <!-- VRRP -->
+        <div id="vrrp" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    VRRP 状态
+                    <button class="btn btn-primary" onclick="loadVRRP()">刷新</button>
+                </div>
+                <div class="output-box" id="vrrp-output">点击刷新按钮加载 VRRP 信息</div>
+            </div>
+        </div>
+
+        <!-- 配置管理 -->
+        <div id="config" class="tab-content">
+            <div class="card">
+                <div class="card-title">
+                    运行配置
+                    <div>
+                        <button class="btn btn-primary" onclick="loadConfig()">查看配置</button>
+                        <button class="btn btn-success" onclick="saveConfig()">保存配置</button>
+                    </div>
+                </div>
+                <div id="config-message"></div>
+                <div class="output-box" id="config-output">点击查看配置按钮加载配置信息</div>
+            </div>
+        </div>
+
+        <!-- 配置编辑 -->
+        <div id="config-edit" class="tab-content">
+            <!-- 接口配置 -->
+            <div class="card">
+                <div class="card-title">接口配置</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <input type="text" class="command-input" id="if-name" placeholder="接口名 (如: eth0)">
+                    <input type="text" class="command-input" id="if-ip" placeholder="IP 地址 (如: 192.168.1.1)">
+                    <input type="text" class="command-input" id="if-mask" placeholder="掩码 (如: 24)">
+                </div>
+                <button class="btn btn-primary" onclick="configInterface()">配置接口</button>
+                <div id="if-message" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- 静态路由配置 -->
+            <div class="card">
+                <div class="card-title">静态路由配置</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <input type="text" class="command-input" id="route-dest" placeholder="目标网络 (如: 10.0.0.0/24)">
+                    <input type="text" class="command-input" id="route-gw" placeholder="网关 (如: 192.168.1.254)">
+                </div>
+                <button class="btn btn-primary" onclick="configStaticRoute()">添加路由</button>
+                <button class="btn btn-primary" onclick="deleteStaticRoute()" style="background: #e53e3e;">删除路由</button>
+                <div id="route-message" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- OSPF 配置 -->
+            <div class="card">
+                <div class="card-title">OSPF 配置</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <input type="text" class="command-input" id="ospf-network" placeholder="网络 (如: 192.168.1.0/24)">
+                    <input type="text" class="command-input" id="ospf-area" placeholder="区域 (如: 0.0.0.0)">
+                </div>
+                <button class="btn btn-primary" onclick="configOSPF()">配置 OSPF</button>
+                <div id="ospf-config-message" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- BGP 配置 -->
+            <div class="card">
+                <div class="card-title">BGP 配置</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <input type="text" class="command-input" id="bgp-asn" placeholder="本地 AS 号 (如: 65001)">
+                    <input type="text" class="command-input" id="bgp-neighbor" placeholder="邻居 IP (如: 192.168.1.2)">
+                    <input type="text" class="command-input" id="bgp-remote-as" placeholder="远端 AS 号 (如: 65002)">
+                </div>
+                <button class="btn btn-primary" onclick="configBGP()">配置 BGP</button>
+                <div id="bgp-config-message" style="margin-top: 1rem;"></div>
+            </div>
+
+            <!-- 主机名配置 -->
+            <div class="card">
+                <div class="card-title">主机名配置</div>
+                <input type="text" class="command-input" id="hostname-input" placeholder="主机名 (如: router1)" style="margin-bottom: 1rem;">
+                <button class="btn btn-primary" onclick="configHostname()">设置主机名</button>
+                <div id="hostname-message" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+
+        <!-- 命令行 -->
+        <div id="command" class="tab-content">
+            <div class="card">
+                <div class="card-title">命令行执行</div>
+                <input type="text" class="command-input" id="command-input"
+                       placeholder="输入命令 (例如: show ip route)">
+                <button class="btn btn-primary" onclick="executeCommand()">执行</button>
+                <div id="command-message" style="margin-top: 1rem;"></div>
+                <div class="output-box" id="command-output" style="margin-top: 1rem;">
+输入命令并点击执行按钮
+注意：只支持查询命令 (show/display)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切换标签页
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // 自动加载数据
+            if (tabName === 'dashboard') loadSystemInfo();
+        }
+
+        // API 调用辅助函数
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                return await response.json();
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        // 加载系统信息
+        async function loadSystemInfo() {
+            const container = document.getElementById('system-info');
+            container.innerHTML = '<div class="loading">加载中...</div>';
+
+            const data = await apiCall('/api/system/info');
+            container.innerHTML = `
+                <div class="info-item">
+                    <div class="info-label">主机名</div>
+                    <div class="info-value">${data.hostname || 'N/A'}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">更新时间</div>
+                    <div class="info-value">${new Date(data.timestamp).toLocaleString('zh-CN')}</div>
+                </div>
+            `;
+        }
+
+        // 加载接口信息
+        async function loadInterfaces() {
+            const output = document.getElementById('interfaces-output');
+            output.textContent = '加载中...';
+
+            const data = await apiCall('/api/interfaces');
+            output.textContent = data.success ? data.data : `错误: ${data.error}`;
+        }
+
+        // 加载路由表
+        async function loadRoutes() {
+            const output = document.getElementById('routes-output');
+            output.textContent = '加载中...';
+
+            const data = await apiCall('/api/routes');
+            output.textContent = data.success ? data.data : `错误: ${data.error}`;
+        }
+
+        // 加载 OSPF 信息
+        async function loadOSPF() {
+            const output = document.getElementById('ospf-output');
+            output.textContent = '加载中...';
+
+            const data = await apiCall('/api/ospf/neighbors');
+            output.textContent = data.success ? data.data : `错误: ${data.error}`;
+        }
+
+        // 加载 BGP 信息
+        async function loadBGP() {
+            const output = document.getElementById('bgp-output');
+            output.textContent = '加载中...';
+
+            const data = await apiCall('/api/bgp/summary');
+            output.textContent = data.success ? data.data : `错误: ${data.error}`;
+        }
+
+        // 加载 VRRP 信息
+        async function loadVRRP() {
+            const output = document.getElementById('vrrp-output');
+            output.textContent = '加载中...';
+
+            const data = await apiCall('/api/vrrp/status');
+            output.textContent = data.success ? data.data : `错误: ${data.error}`;
+        }
+
+        // 加载配置
+        async function loadConfig() {
+            const output = document.getElementById('config-output');
+            output.textContent = '加载中...';
+
+            const data = await apiCall('/api/config/running');
+            output.textContent = data.success ? data.data : `错误: ${data.error}`;
+        }
+
+        // 保存配置
+        async function saveConfig() {
+            const message = document.getElementById('config-message');
+            message.innerHTML = '<div class="loading">保存中...</div>';
+
+            const data = await apiCall('/api/config/save', { method: 'POST' });
+            message.innerHTML = data.success
+                ? '<div class="success">配置已成功保存</div>'
+                : `<div class="error">保存失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 执行命令
+        async function executeCommand() {
+            const input = document.getElementById('command-input');
+            const output = document.getElementById('command-output');
+            const message = document.getElementById('command-message');
+            const command = input.value.trim();
+
+            if (!command) {
+                message.innerHTML = '<div class="error">请输入命令</div>';
+                return;
+            }
+
+            output.textContent = '执行中...';
+            message.innerHTML = '';
+
+            const data = await apiCall('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            });
+
+            output.textContent = data.success ? data.output : `错误: ${data.error}`;
+        }
+
+        // 支持回车执行命令
+        document.getElementById('command-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                executeCommand();
+            }
+        });
+
+        // 配置接口
+        async function configInterface() {
+            const message = document.getElementById('if-message');
+            const interface_name = document.getElementById('if-name').value.trim();
+            const ip_address = document.getElementById('if-ip').value.trim();
+            const netmask = document.getElementById('if-mask').value.trim();
+
+            if (!interface_name || !ip_address || !netmask) {
+                message.innerHTML = '<div class="error">请填写所有字段</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="loading">配置中...</div>';
+
+            const data = await apiCall('/api/config/interface', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interface: interface_name, ip_address, netmask })
+            });
+
+            message.innerHTML = data.success
+                ? '<div class="success">接口配置成功</div>'
+                : `<div class="error">配置失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 配置静态路由
+        async function configStaticRoute() {
+            const message = document.getElementById('route-message');
+            const destination = document.getElementById('route-dest').value.trim();
+            const gateway = document.getElementById('route-gw').value.trim();
+
+            if (!destination || !gateway) {
+                message.innerHTML = '<div class="error">请填写所有字段</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="loading">配置中...</div>';
+
+            const data = await apiCall('/api/config/static-route', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ destination, gateway })
+            });
+
+            message.innerHTML = data.success
+                ? '<div class="success">路由添加成功</div>'
+                : `<div class="error">添加失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 删除静态路由
+        async function deleteStaticRoute() {
+            const message = document.getElementById('route-message');
+            const destination = document.getElementById('route-dest').value.trim();
+            const gateway = document.getElementById('route-gw').value.trim();
+
+            if (!destination || !gateway) {
+                message.innerHTML = '<div class="error">请填写所有字段</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="loading">删除中...</div>';
+
+            const data = await apiCall('/api/config/delete-static-route', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ destination, gateway })
+            });
+
+            message.innerHTML = data.success
+                ? '<div class="success">路由删除成功</div>'
+                : `<div class="error">删除失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 配置 OSPF
+        async function configOSPF() {
+            const message = document.getElementById('ospf-config-message');
+            const network = document.getElementById('ospf-network').value.trim();
+            const area = document.getElementById('ospf-area').value.trim() || '0.0.0.0';
+
+            if (!network) {
+                message.innerHTML = '<div class="error">请填写网络地址</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="loading">配置中...</div>';
+
+            const data = await apiCall('/api/config/ospf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ network, area })
+            });
+
+            message.innerHTML = data.success
+                ? '<div class="success">OSPF 配置成功</div>'
+                : `<div class="error">配置失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 配置 BGP
+        async function configBGP() {
+            const message = document.getElementById('bgp-config-message');
+            const asn = document.getElementById('bgp-asn').value.trim();
+            const neighbor = document.getElementById('bgp-neighbor').value.trim();
+            const remote_as = document.getElementById('bgp-remote-as').value.trim();
+
+            if (!asn || !neighbor || !remote_as) {
+                message.innerHTML = '<div class="error">请填写所有字段</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="loading">配置中...</div>';
+
+            const data = await apiCall('/api/config/bgp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ asn, neighbor, remote_as })
+            });
+
+            message.innerHTML = data.success
+                ? '<div class="success">BGP 配置成功</div>'
+                : `<div class="error">配置失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 配置主机名
+        async function configHostname() {
+            const message = document.getElementById('hostname-message');
+            const hostname = document.getElementById('hostname-input').value.trim();
+
+            if (!hostname) {
+                message.innerHTML = '<div class="error">请输入主机名</div>';
+                return;
+            }
+
+            message.innerHTML = '<div class="loading">配置中...</div>';
+
+            const data = await apiCall('/api/config/hostname', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hostname })
+            });
+
+            message.innerHTML = data.success
+                ? '<div class="success">主机名配置成功</div>'
+                : `<div class="error">配置失败: ${data.error}</div>`;
+
+            setTimeout(() => { message.innerHTML = ''; }, 3000);
+        }
+
+        // 页面加载时初始化
+        window.onload = function() {
+            loadSystemInfo();
+        };
+    </script>
+</body>
+</html>

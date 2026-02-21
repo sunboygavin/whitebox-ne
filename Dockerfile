@@ -26,6 +26,8 @@ RUN apt-get update && apt-get install -y \
     frr-snmp \
     snmp \
     snmpd \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # 配置 FRR 守护进程
@@ -49,6 +51,10 @@ RUN mkdir -p /var/log/frr /etc/frr
 # 复制配置文件
 COPY frr.conf /etc/frr/frr.conf
 
+# 复制 Web 管理界面
+COPY src/web_management /opt/whitebox-web
+RUN pip3 install -r /opt/whitebox-web/requirements.txt
+
 # 设置权限
 RUN chown frr:frr /etc/frr/frr.conf && \
     chmod 640 /etc/frr/daemons
@@ -57,8 +63,9 @@ RUN chown frr:frr /etc/frr/frr.conf && \
 # SNMP: 161 (UDP)
 # BGP: 179 (TCP)
 # OSPF: 89 (TCP/UDP)
+# Web UI: 8080 (TCP)
 # VRRP: 112 (VIP, 不需要暴露)
-EXPOSE 161/udp 179/tcp 89/tcp
+EXPOSE 161/udp 179/tcp 89/tcp 8080/tcp
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \

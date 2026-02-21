@@ -1,0 +1,14 @@
+[Unit]
+Description=WhiteBox Network Element Web Management Interface
+After=network.target frr.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/.openclaw/workspace/whitebox-ne/src/web_management
+ExecStart=/usr/bin/python3 /root/.openclaw/workspace/whitebox-ne/src/web_management/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

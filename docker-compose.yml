@@ -31,8 +31,13 @@ services:
       # OSPF (TCP/UDP)
       - "89:89/tcp"
       - "89:89/udp"
+      # Web UI (TCP)
+      - "8080:8080/tcp"
     environment:
       - TZ=Asia/Shanghai
+      - ENABLE_WEB=true
+      - WEB_PORT=8080
+      - ALLOW_CONFIG_COMMANDS=true
     healthcheck:
       test: ["CMD", "vtysh", "-c", "show version"]
       interval: 30s
@@ -63,6 +68,7 @@ services:
       - "2179:179/tcp"  # BGP
       - "2089:89/tcp"   # OSPF
       - "2089:89/udp"
+      - "8081:8080/tcp" # Web UI
     environment:
       - TZ=Asia/Shanghai
     profiles:

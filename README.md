@@ -52,6 +52,7 @@ sudo ./security-hardening.sh
 | 功能模块 | 核心组件 | 协议支持 | 接口类型 | 备注 |
 | :--- | :--- | :--- | :--- | :--- |
 | **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 (已原生支持华为风格 CLI) |
+| **Web 管理界面** | Flask | HTTP/REST API | Web UI | 图形化配置管理界面，详见 `src/web_management/README.md` |
 | **管理接口** | Net-SNMP | SNMPv2c/v3 | SNMP AgentX | 通过 AgentX 扩展 FRR MIB |
 | **配置接口** | Sysrepo/Netopeer2 | Netconf/YANG | SSH (Netconf) | 需手动编译安装，详见 `netconf_guide.md` |
 | **OpenConfig 支持** | Sysrepo/Netopeer2 | Netconf/gNMI | YANG Models | 标准化配置接口，详见 `OPENCONFIG_GUIDE.md` |
@@ -86,9 +87,17 @@ whitebox-ne/
     │       └── bgp_flowspec.c      # BGP Flowspec 核心处理逻辑源码示例
     ├── frr_patch/                  # FRR 源码修改补丁存放目录 (备用)
     │   └── 0001-huawei-cli-native-support.patch # 华为风格 CLI 原生支持补丁 (作为参考)
-    └── snmp_subagent/              # 自定义 SNMP 子代理源码目录
-        ├── custom_subagent.c       # 自定义 SNMP 子代理 C 语言源码
-        └── Makefile                # custom_subagent 的编译文件
+    ├── snmp_subagent/              # 自定义 SNMP 子代理源码目录
+    │   ├── custom_subagent.c       # 自定义 SNMP 子代理 C 语言源码
+    │   └── Makefile                # custom_subagent 的编译文件
+    └── web_management/             # Web 管理界面
+        ├── app.py                  # Flask 后端应用
+        ├── templates/              # HTML 模板目录
+        │   └── index.html          # 主页面
+        ├── requirements.txt        # Python 依赖
+        ├── start.sh                # 启动脚本
+        ├── whitebox-web.service    # systemd 服务文件
+        └── README.md               # Web 管理界面文档
 ```
 
 ### 目录与文件说明：
@@ -116,6 +125,7 @@ whitebox-ne/
 - **`src/frr_core/`**: **此目录存放了经过我们改造的 FRR 核心源码示例。与 `frr_patch` 不同，这里是直接修改后的 C 语言文件，方便您直接查看和修改。**
 - **`src/frr_patch/`**: 存放对 FRR 源码进行修改的补丁文件。这些补丁是作为 `src/f`r_core` 目录中代码修改的参考，如果您选择从 FRR 官方源码开始，可以应用这些补丁。
 - **`src/snmp_subagent/`**: 存放自定义 SNMP 子代理的源码。您可以在此处添加自己的 MIB 扩展。
+- **`src/web_management/`**: Web 管理界面源码，基于 Flask 框架，提供图形化的配置管理功能。详见 `src/web_management/README.md`。
 
 ---
 
@@ -210,7 +220,30 @@ sudo systemctl restart frr
 
 ## ✅ 核心功能验证与使用
 
-### 4.1. 命令行界面 (CLI) - 华为风格
+### 4.1. Web 管理界面（推荐）
+
+本项目提供了基于 Flask 的 Web 管理界面，可通过浏览器进行可视化配置和监控。
+
+**启动 Web 管理界面：**
+
+```bash
+cd src/web_management
+./start.sh
+```
+
+访问 http://localhost:8080 即可使用 Web 界面。
+
+**功能特性：**
+- 仪表盘：系统信息概览
+- 接口管理：查看网络接口状态
+- 路由管理：查看路由表
+- OSPF/BGP/VRRP 监控：实时查看协议状态
+- 配置管理：查看和保存运行配置
+- 命令行：在 Web 界面执行 vtysh 命令
+
+详细使用说明请参考 [Web 管理界面文档](src/web_management/README.md)。
+
+### 4.2. 命令行界面 (CLI) - 华为风格
 
 使用 `vtysh` 命令进入 FRR 的集成命令行界面。**通过源码级改造，`vtysh` 已原生支持华为风格关键字。**
 
@@ -228,7 +261,7 @@ sudo vtysh
 | 查看 VRRP 状态 | `display vrrp` | `show vrrp` |
 | 保存配置 | `save` | `write` |
 
-### 4.2. SNMP 管理
+### 4.3. SNMP 管理
 
 SNMP 服务默认监听 `127.0.0.1:161`，社区字符串为 `public`。
 
@@ -250,7 +283,7 @@ SNMP 服务默认监听 `127.0.0.1:161`，社区字符串为 `public`。
     snmpwalk -v2c -c public localhost .1.3.6.1.4.1.9999.1
     ```
 
-### 4.3. Netconf/YANG (高级)
+### 4.4. Netconf/YANG (高级)
 
 Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译步骤请参考项目根目录下的 `netconf_guide.md` 文件。
 

@@ -58,6 +58,18 @@ service frr start
 # 等待 FRR 完全启动
 sleep 3
 
+# 启动 Web 管理界面（可选）
+if [ "${ENABLE_WEB:-true}" = "true" ]; then
+    echo "启动 Web 管理界面..."
+    cd /opt/whitebox-web
+    python3 app.py &
+    WEB_PID=$!
+    echo "Web 管理界面已启动 (PID: $WEB_PID)"
+else
+    echo "Web 管理界面已禁用"
+    WEB_PID=""
+fi
+
 # 检查服务状态
 echo ""
 echo "======================================"
@@ -77,6 +89,12 @@ else
     echo "❌ SNMP 服务: 未启动"
 fi
 
+if [ -n "$WEB_PID" ] && kill -0 $WEB_PID 2>/dev/null; then
+    echo "✅ Web 管理界面: 运行中 (端口 ${WEB_PORT:-8080})"
+elif [ "${ENABLE_WEB:-true}" = "true" ]; then
+    echo "❌ Web 管理界面: 未启动"
+fi
+
 echo ""
 echo "======================================"
 echo "FRR 守护进程状态"
@@ -87,6 +105,7 @@ echo ""
 echo "======================================"
 echo "访问方式"
 echo "======================================"
+echo "Web 管理界面: http://<container_ip>:8080"
 echo "命令行界面: docker exec -it <container_name> vtysh"
 echo "查看日志: docker exec -it <container_name> cat /var/log/frr/frr.log"
 echo "重启服务: docker exec -it <container_name> service frr restart"
