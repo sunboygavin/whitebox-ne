@@ -1,0 +1,81 @@
+# 白盒网元告警规则
+# Prometheus 告警规则配置
+
+groups:
+  - name: bgp_alerts
+    interval: 30s
+    rules:
+      # BGP 邻居离线
+      - alert: BGPNeighborDown
+        expr: frr_bgp_neighbor_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: bgp
+        annotations:
+          summary: "BGP 邻居离线: {{ $labels.neighbor }}"
+          description: "BGP 邻居 {{ $labels.neighbor }} 已离线超过 2 分钟"
+
+      # BGP 邻居路由数量异常
+      - alert: BGPRouteCountAnomaly
+        expr: frr_bgp_neighbor_received_routes < 100 or frr_bgp_neighbor_received_routes > 100000
+        for: 5m
+        labels:
+          severity: warning
+          component: bgp
+        annotations:
+          summary: "BGP 邻居路由数量异常: {{ $labels.neighbor }}"
+          description: "BGP 邻居 {{ $labels.neighbor }} 的路由数量为 {{ $value }}，可能存在异常"
+
+  - name: interface_alerts
+    interval: 30s
+    rules:
+      # 接口错误率过高
+      - alert: InterfaceHighErrorRate
+        expr: rate(frr_interface_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: interface
+        annotations:
+          summary: "接口错误率过高: {{ $labels.interface }}"
+          description: "接口 {{ $labels.interface }} 的错误率超过 10/秒"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # 内存使用率过高
+      - alert: HighMemoryUsage
+        expr: (frr_memory_usage_bytes{type="used"} / frr_memory_usage_bytes{type="total"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "内存使用率过高"
+          description: "系统内存使用率超过 85%"
+
+      # CPU 使用率过高
+      - alert: HighCPUUsage
+        expr: frr_cpu_usage_percent > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "CPU 使用率过高"
+          description: "系统 CPU 使用率超过 80%"
+
+  - name: daemon_alerts
+    interval: 30s
+    rules:
+      # 守护进程离线
+      - alert: DaemonDown
+        expr: frr_daemon_uptime_seconds == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: daemon
+        annotations:
+          summary: "FRR 守护进程离线: {{ $labels.daemon }}"
+          description: "FRR 守护进程 {{ $labels.daemon }} 已离线"

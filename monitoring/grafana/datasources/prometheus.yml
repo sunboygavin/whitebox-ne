@@ -1,0 +1,30 @@
+# Grafana 数据源配置
+apiVersion: 1
+
+datasources:
+  # Prometheus 数据源
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      cacheDuration: ''
+    version: 1
+
+  # Loki 日志数据源 (如果启用)
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: Prometheus
+          matcherRegex: '.*instance="([^"]+)".*'
+          name: Instance
+          url: $${__value.raw}

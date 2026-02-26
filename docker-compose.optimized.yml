@@ -1,0 +1,244 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # 白盒网元 - 主路由器 (优化版本)
+  # ============================================
+  whitebox-ne:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    image: whitebox-ne:optimized
+    container_name: whitebox-ne-router
+    hostname: whitebox-router
+    
+    # 网络模式
+    network_mode: bridge
+    
+    # 重启策略
+    restart: unless-stopped
+    
+    # 精细化权限管理 (借鉴 VyOS)
+    # 不使用 --privileged，仅添加必要的 capabilities
+    cap_add:
+      - NET_ADMIN       # 网络管理
+      - NET_RAW         # 原始套接字 (BGP/OSPF)
+      - SYS_ADMIN      oka   # 系统管理 (路由表修改)
+      - SYS_PTRACE      # 调试支持 (可选)
+      - NET_BROADCAST   # 广播支持
+    
+    # 挂载卷
+    volumes:
+      # 配置文件挂载 (支持动态更新)
+      - ./frr.conf:/etc/frr/frr.conf:ro
+      # 日志目录
+      - ./logs:/var/log/frr
+      # 持久化配置
+      - whitebox-config:/etc/frr
+      # 系统内核模块 (VyOS 最佳实践)
+      - /lib/modules:/lib/modules:ro
+    
+    # 端口映射
+    ports:
+      # SNMP (UDP)
+      - "161:161/udp"
+      # BGP (TCP)
+      - "179:179/tcp"
+      # OSPF (TCP/UDP)
+      - "89:89/tcp"
+      - "89:89/udp"
+      # Web UI (TCP)
+      - "8080:8080/tcp"
+      # gNMI (TCP) - 新增
+      - "9339:9339/tcp"
+      # Prometheus Exporter (TCP) - 新增
+      - "9090:9090/tcp"
+    
+    # 环境变量
+    environment:
+      - TZ=Asia/Shanghai
+      - ENABLE_WEB=true
+      - WEB_PORT=8080
+      - ENABLE_PROMETHEUS=true
+      - PROMETHEUS_PORT=9090
+      - ENABLE_GNMI=false
+      - GNMI_PORT=9339
+      - AUTO_CONFIG_INTERFACES=true
+    
+    # 健康检查 (增强版)
+    healthcheck:
+      test: ["CMD", "vtysh", "-c", "show version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # Prometheus 监控 (新增)
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: whitebox-prometheus
+    hostname: prometheus
+    
+    restart: unless-stopped
+    
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    
+    ports:
+      - "9091:9090/tcp"
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # Grafana 可视化 (新增)
+  # ============================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: whitebox-grafana
+    hostname: grafana
+    
+    restart: unless-stopped
+    
+    volumes:
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana-data:/var/lib/grafana
+    
+    ports:
+      - "3000:3000/tcp"
+    
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # 日志收集 - Loki (可选)
+  # ============================================
+  loki:
+    image: grafana/loki:latest
+    container_name: whitebox-loki
+    hostname: loki
+    
+    restart: unless-stopped
+    
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    
+    ports:
+      - "3100:3100/tcp"
+    
+    command: -config.file=/etc/loki/local-config.yaml
+    
+    profiles:
+      - loki
+
+  # ============================================
+  # 第二个白盒网元 (用于拓扑测试)
+  # ============================================
+  whitebox-ne-peer:
+    build:
+      context: .
+      dockerfile: Dockerfile.optimized
+    image: whitebox-ne:optimized
+    container_name: whitebox-ne-peer
+    hostname: whitebox-peer
+    
+    network_mode: bridge
+    
+    restart: unless-stopped
+    
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - NET_BROADCAST
+    
+    volumes:
+      - ./frr-peer.conf:/etc/frr/frr.conf:ro
+      - ./logs-peer:/var/log/frr
+    
+    ports:
+      - "2161:161/udp"   # SNMP
+      - "2179:179/tcp"   # BGP
+      - "2089:89/tcp"    # OSPF
+      - "2089:89/udp"
+      - "8081:8080/tcp"  # Web UI
+      - "9340:9339/tcp"  # gNMI
+      - "9092:9090/tcp"  # Prometheus
+    
+    environment:
+      - TZ=Asia/Shanghai
+      - ENABLE_PROMETHEUS=true
+      - PROMETHEUS_PORT=9090
+    
+    healthcheck:
+      test: ["CMD", "vtysh", "-c", "show version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    
+    profiles:
+      - peer
+
+# ============================================
+# 数据卷
+# ============================================
+volumes:
+  whitebox-config:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+
+# ============================================
+# 网络
+# ============================================
+networks:
+  default:
+    driver: bridge
+    name: whitebox-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
