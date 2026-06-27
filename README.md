@@ -2,9 +2,21 @@
 
 这是一个**生产级、企业级**的白盒网元实施方案，基于 **FRRouting (FRR)** 协议栈构建，旨在提供高性能、标准化、可观测的路由和管理功能。
 
-**🎉 v2.0 优化版 (2026-02-26)** - 借鉴 VyOS 和 OpenConfig 最佳实践
+**🎉 v3.0 生产就绪版 (2026-06-27)** - 真实内核下发 + 完整功能实现
 
-**新版本特性**:
+**v3.0 核心增强**:
+- ✅ **ACL 真实下发** — 华为风格 ACL 命令直接同步到 iptables/nftables 内核规则
+- ✅ **NAT 真实下发** — EasyIP (MASQUERADE)、NAT Server (DNAT)、Static NAT 均通过 iptables 实际生效
+- ✅ **Zone Firewall 真实下发** — 安全区域 + 策略规则通过 iptables FORWARD 链 + ipset 实际生效
+- ✅ **QoS 真实下发** — Traffic Classifier + Behavior + Policy 通过 Linux TC (HTB/tbf/u32 filter) 实际生效
+- ✅ **Eth-Trunk 真实下发** — 链路聚合通过 Linux bonding 驱动 (802.3ad/LACP/round-robin/active-backup) 实际生效
+- ✅ **OpenConfig 适配器** — Sysrepo 数据存储回调 + gNMI 接口存根 + YANG ↔ FRR 双向转换
+- ✅ **运行时集成测试** — `./test-runtime-integration.sh` 验证协议、ACL、NAT、QoS、Bonding、Web 全链路
+- ✅ **配置持久化** — ACL/NAT/Firewall/QoS/Eth-Trunk 配置支持 save / reload
+
+**v2.0 优化版 (2026-02-26)** - 借鉴 VyOS 和 OpenConfig 最佳实践
+
+**v2.0 特性**:
 - ✅ **多阶段构建** - 镜像体积减少 25% (242 MB → 180 MB)
 - ✅ **精细化权限管理** - 移除 `--privileged`，使用最小权限原则
 - ✅ **Prometheus 监控** - 原生 Prometheus Exporter，完整指标导出
@@ -19,71 +31,37 @@
 
 ### 方式一：优化版 Docker 部署（推荐）⭐
 
-**v2.0 优化版 - 包含完整监控栈**
+**v3.0 优化版 - 包含完整监控栈 + 全功能内核下发**
 
 ```bash
-# 1. 构建优化版镜像 (多阶段构建，体积更小)
+# 1. 构建优化版镜像
 ./build-optimized.sh
 
 # 2. 运行完整监控栈 (Prometheus + Grafana + Loki)
 docker-compose -f docker-compose.optimized.yml up -d
 
-# 3. 进入 FRR 命令行
+# 3. 运行全链路运行时测试
+./test-runtime-integration.sh
+
+# 4. 进入 FRR 命令行
 docker exec -it whitebox-ne-router vtysh
 
-# 4. 访问 Web 管理界面
+# 5. 访问 Web 管理界面
 # http://localhost:8080
 
-# 5. 访问 Grafana 仪表板 (admin/admin)
+# 6. 访问 Grafana 仪表板 (admin/admin)
 # http://localhost:3000
-
-# 6. 访问 Prometheus 指标
-# http://localhost:9091
-
-# 7. 运行完整测试
-./test-optimized.sh
-```
-
-### 方式二：标准 Docker 部署
-
-```bash
-# 1. 构建镜像
-./build-docker.sh
-
-# 2. 运行容器
-./run-docker.sh
-
-# 3. 进入 FRR 命令行
-docker exec -it whitebox-ne-router vtysh
 ```
 
 ### 方式二：直接安装
 
 ```bash
-# 1. 执行安装脚本
 sudo ./install_script.sh
-
-# 2. 应用配置
 sudo cp frr.conf /etc/frr/frr.conf
 sudo chown frr:frr /etc/frr/frr.conf
 sudo systemctl restart frr
-
-# 3. 进入命令行
 sudo vtysh
 ```
-
----
-
-## ⚠️ 重要提示
-
-**在生产环境部署前，请务必执行安全加固**:
-```bash
-sudo ./security-hardening.sh
-```
-
-详细信息请参考:
-- [安全加固指南](SECURITY_HARDENING.md)
-- [功能优化路线图](OPTIMIZATION_ROADMAP.md)
 
 ---
 
@@ -91,12 +69,15 @@ sudo ./security-hardening.sh
 
 | 功能模块 | 核心组件 | 协议支持 | 接口类型 | 备注 |
 | :--- | :--- | :--- | :--- | :--- |
-| **路由控制面** | FRRouting (FRR) | OSPF, BGP, VRRP | CLI (VTYSH) | BGP 支持 SRv6 和 Flowspec 配置逻辑 (已原生支持华为风格 CLI) |
-| **Web 管理界面** | Flask | HTTP/REST API | Web UI | 图形化配置管理界面，详见 `src/web_management/README.md` |
-| **管理接口** | Net-SNMP | SNMPv2c/v3 | SNMP AgentX | 通过 AgentX 扩展 FRR MIB |
-| **配置接口** | Sysrepo/Netopeer2 | Netconf/YANG | SSH (Netconf) | 需手动编译安装，详见 `netconf_guide.md` |
-| **OpenConfig 支持** | Sysrepo/Netopeer2 | Netconf/gNMI | YANG Models | 标准化配置接口，详见 `OPENCONFIG_GUIDE.md` |
-| **转发面** | Linux Kernel | IPv4/IPv6 | - | 依赖 Linux 内核转发能力 |
+| **路由控制面** | FRRouting (FRR) | OSPF, BGP, IS-IS, RIP, VRRP, BFD | CLI (VTYSH) | 原生协议栈，华为风格命令映射 |
+| **二层/接口** | iproute2 + Linux Kernel | VLAN, VLANIF, Eth-Trunk (LACP) | CLI / Netconf | v3.0: 真实 bonding 驱动 / VLAN 子接口创建 |
+| **Web 管理界面** | Flask | HTTP/REST API | Web UI | 图形化配置管理，调用 vtysh 获取状态 |
+| **管理接口** | Net-SNMP | SNMPv2c/v3 | SNMP AgentX | AgentX 扩展 FRR MIB + 自定义子代理 |
+| **配置接口** | Sysrepo/Netopeer2 | Netconf/gNMI/YANG | SSH / gRPC | v3.0: Sysrepo 双向回调 + gNMI 存根 |
+| **安全功能** | iptables + ipset | ACL, NAT44, Zone Firewall | CLI / Netconf | v3.0: 真实内核规则下发，配置持久化 |
+| **QoS** | Linux TC (HTB/tbf/u32) | Classifier, CAR, Shaping, WRED, WRR | CLI / Netconf | v3.0: 真实 HTB class + filter 下发 |
+| **监控** | Prometheus + Grafana + Loki | BGP/OSPF/接口/系统指标 | HTTP / Web | 完整监控栈一键部署 |
+| **转发面** | Linux Kernel | IPv4/IPv6 转发 | - | 依赖内核转发能力，支持 DPDK 扩展 |
 
 ---
 
@@ -104,409 +85,97 @@ sudo ./security-hardening.sh
 
 ```
 whitebox-ne/
-├── README.md                       # 本文档：项目总览、安装、使用、开发与测试指南
+├── README.md                       # 项目总览、安装、使用、开发与测试指南
 ├── DOCKER_DEPLOYMENT.md            # Docker 部署详细指南
-├── install_script.sh               # 基础组件（FRR, SNMP）一键安装脚本
-├── build_from_source.sh            # 从源码构建 FRR 和自定义子代理的脚本
+├── install_script.sh               # 基础组件一键安装脚本
+├── build_from_source.sh            # 从源码构建 FRR 脚本
 ├── build-docker.sh                 # Docker 镜像构建脚本
 ├── run-docker.sh                   # Docker 容器运行脚本
-├── Dockerfile                      # Docker 镜像定义文件
-├── docker-compose.yml              # Docker Compose 编排文件
+├── Dockerfile                      # Docker 镜像定义
+├── docker-compose.yml              # Docker Compose 标准版
+├── docker-compose.optimized.yml    # Docker Compose 优化版 (监控栈)
 ├── docker-entrypoint.sh            # Docker 容器启动脚本
 ├── frr.conf                        # FRR 核心路由配置模板
-├── frr.docker.conf                 # Docker 版本的 FRR 配置
-├── snmpd.conf                      # Net-SNMP 配置模板
-├── netconf_guide.md                # Netconf/YANG 集成与编译指南
-└── src/
-    ├── frr_core/                   # 经过改造的 FRR 核心源码目录
-    │   ├── lib/                    # 存放 FRR 的 lib 库源码
-    │   │   └── command.c                     # 华为风格 CLI 原生支持的 command.c 示例
-    │   ├── zebra/                  # 存放 FRR Zebra 守护进程源码
-    │   │   └── srv6.c              # SRv6 核心处理逻辑源码示例
-    │   └── bgpd/                   # 存放 FRR BGP 守护进程源码
-    │       └── bgp_flowspec.c      # BGP Flowspec 核心处理逻辑源码示例
-    ├── frr_patch/                  # FRR 源码修改补丁存放目录 (备用)
-    │   └── 0001-huawei-cli-native-support.patch # 华为风格 CLI 原生支持补丁 (作为参考)
-    ├── snmp_subagent/              # 自定义 SNMP 子代理源码目录
-    │   ├── custom_subagent.c       # 自定义 SNMP 子代理 C 语言源码
-    │   └── Makefile                # custom_subagent 的编译文件
-    └── web_management/             # Web 管理界面
-        ├── app.py                  # Flask 后端应用
-        ├── templates/              # HTML 模板目录
-        │   └── index.html          # 主页面
-        ├── requirements.txt        # Python 依赖
-        ├── start.sh                # 启动脚本
-        ├── whitebox-web.service    # systemd 服务文件
-        └── README.md               # Web 管理界面文档
+├── frr.docker.conf                 # Docker 版 FRR 配置
+├── test-runtime-integration.sh     # v3.0 运行时集成测试 (全链路验证)
+├── src/
+│   ├── frr_core/                   # FRR 核心源码改造
+│   │   ├── lib/
+│   │   │   ├── command.c           # 华为风格 CLI 命令映射
+│   │   │   └── huawei_cli.h        # CLI 扩展头文件
+│   │   ├── zebra/
+│   │   │   ├── srv6.c              # SRv6 处理逻辑
+│   │   │   ├── interface_vlan.c    # VLAN 子接口 (真实 iproute2 下发)
+│   │   │   └── eth_trunk.c         # Eth-Trunk 链路聚合 (Linux bonding 驱动)
+│   │   ├── bgpd/
+│   │   │   ├── bgp_flowspec.c      # BGP Flowspec 处理逻辑
+│   │   │   └── bgp_huawei.c        # BGP 华为扩展命令
+│   │   ├── ospfd/
+│   │   │   └── ospf_huawei.c       # OSPF 华为扩展命令
+│   │   ├── isisd/
+│   │   │   └── isis_huawei.c       # IS-IS 华为扩展命令
+│   │   └── ripd/
+│   │       └── rip_huawei.c        # RIP 华为扩展命令
+│   ├── frr_patch/                  # FRR 源码补丁 (备用)
+│   ├── ip_services/                # IP 业务服务 (v3.0 真实下发)
+│   │   ├── acl/
+│   │   │   └── acl_huawei.c        # ACL (iptables/nftables 真实下发)
+│   │   └── nat/
+│   │       └── nat44.c             # NAT44 (iptables NAT 表真实下发)
+│   ├── security/                   # 安全模块 (v3.0 真实下发)
+│   │   ├── auth/
+│   │   │   └── aaa.c               # AAA 认证框架
+│   │   ├── firewall/
+│   │   │   └── zone_firewall.c     # 区域防火墙 (iptables FORWARD + ipset)
+│   │   └── vpn/
+│   │       └── gre/
+│   │           └── gre_tunnel.c    # GRE 隧道
+│   ├── qos/                        # QoS 模块 (v3.0 重构，真实 TC 下发)
+│   │   └── qos_all_in_one.c        # Classifier + Behavior + Policy + Queue (HTB/tbf/u32)
+│   ├── high_availability/          # 高可用模块
+│   │   ├── vrrp.c                  # VRRP v2/v3 + 认证 + Track
+│   │   ├── bfd.c                   # BFD 双向转发检测
+│   │   └── track.c                 # Track 联动
+│   ├── openconfig_adapter/         # OpenConfig / gNMI / Netconf (v3.0 新增)
+│   │   └── openconfig_adapter.c    # Sysrepo 回调 + gNMI 存根 + YANG↔FRR
+│   ├── snmp_subagent/              # SNMP 子代理
+│   ├── monitoring/                 # 监控可观测性
+│   │   └── prometheus_exporter.py  # Prometheus 指标导出
+│   └── web_management/             # Web 管理界面 (Flask)
+│       ├── app.py
+│       ├── templates/index.html
+│       └── ...
 ```
 
-### 目录与文件说明：
+---
 
-**安装与部署文件:**
-- **`README.md`**: 您正在阅读的这份文档，是项目的核心入口，包含了所有安装、使用、开发和测试的详细信息。
-- **`DOCKER_DEPLOYMENT.md`**: Docker 部署的详细指南，包括网络拓扑示例和故障排除。
-- **`install_script.sh`**: 用于在 Ubuntu 22.04 上快速安装 FRR 和 Net-SNMP 软件包，并进行基础配置。此脚本适用于快速部署和测试，不涉及 FRR 源码编译。
-- **`build_from_source.sh`**: 这是一个更高级的安装脚本，用于从 FRR 官方源码下载、应用自定义补丁、编译并安装 FRR。如果您需要应用源码级别的修改，应使用此脚本。
-- **`Dockerfile`**: Docker 镜像定义文件，用于构建容器化的白盒网元。
-- **`docker-compose.yml`**: Docker Compose 编排文件，支持单机或多网元部署。
-- **`build-docker.sh`**: Docker 镜像构建脚本，简化构建流程。
-- **`run-docker.sh`**: Docker 容器运行脚本，自动化容器创建和启动。
-- **`docker-entrypoint.sh`**: Docker 容器启动脚本，负责服务初始化和健康检查。
+## 源码修改与开发指南
 
-**配置文件:**
-- **`frr.conf`**: FRR 路由器的核心配置文件模板，包含了 OSPF、BGP (SRv6, Flowspec)、VRRP 等协议的基本配置。
-- **`frr.docker.conf`**: Docker 专用的 FRR 配置文件，针对容器环境优化。
-- **`snmpd.conf`**: Net-SNMP 代理的配置文件模板，配置了 AgentX 以允许 FRR 和自定义子代理注册 MIB。
+### v3.0 真实内核下发架构
 
-**文档文件:**
-- **`netconf_guide.md`**: 提供了关于如何集成 Netconf/YANG 的详细指南，包括 Sysrepo 和 Netopeer2 的编译安装步骤。
-
-**源代码文件:**
-- **`src/frr_core/`**: **此目录存放了经过我们改造的 FRR 核心源码示例。与 `frr_patch` 不同，这里是直接修改后的 C 语言文件，方便您直接查看和修改。**
-- **`src/frr_patch/`**: 存放对 FRR 源码进行修改的补丁文件。这些补丁是作为 `src/f`r_core` 目录中代码修改的参考，如果您选择从 FRR 官方源码开始，可以应用这些补丁。
-- **`src/snmp_subagent/`**: 存放自定义 SNMP 子代理的源码。您可以在此处添加自己的 MIB 扩展。
-- **`src/web_management/`**: Web 管理界面源码，基于 Flask 框架，提供图形化的配置管理功能。详见 `src/web_management/README.md`。
+| 功能 | 源码文件 | 下发后端 | 配置持久化 |
+|------|----------|----------|------------|
+| **ACL** | `src/ip_services/acl/acl_huawei.c` | iptables/nftables chain + FORWARD/INPUT 跳转 | `/etc/whitebox-ne/acl.conf` |
+| **NAT44** | `src/ip_services/nat/nat44.c` | iptables nat 表 (PREROUTING/POSTROUTING) | `/etc/whitebox-ne/nat.conf` |
+| **Firewall** | `src/security/firewall/zone_firewall.c` | iptables FORWARD + ipset + zone chain | `/etc/whitebox-ne/firewall.conf` |
+| **QoS** | `src/qos/qos_all_in_one.c` | Linux TC (HTB/tbf/u32 filter) | `/etc/whitebox-ne/qos.conf` |
+| **Eth-Trunk** | `src/frr_core/zebra/eth_trunk.c` | Linux bonding 驱动 (bonding_masters) | `/etc/whitebox-ne/eth-trunk.conf` |
+| **OpenConfig** | `src/openconfig_adapter/openconfig_adapter.c` | Sysrepo 双向回调 + gNMI 存根 | 依赖 FRR write memory |
 
 ---
 
-## 🔧 环境要求
-
-*   **操作系统**: Ubuntu 22.04 LTS (推荐) 或其他基于 Debian 的发行版。
-*   **硬件**: 至少 2 vCPU，4GB RAM。
-*   **网络**: 至少两个网络接口（例如 `eth0`, `eth1`）用于模拟路由器端口。
-*   **Linux 内核**: 建议 5.4+，并确保编译时开启了 `CONFIG_IPV6_SEG6_LWTUNNEL` 选项以支持 SRv6。
-*   **Docker** (可选): 20.10+ 版本，用于容器化部署。
-
----
-
-## 📥 安装指南
-
-### 3.1. 快速安装 (推荐用于快速测试和非源码定制)
-
-此方式使用系统软件包管理器安装预编译的 FRR 和 SNMP 组件，并进行基础配置。**如果您不需要对 FRR 源码进行修改，推荐使用此方式。**
-
-1.  **克隆项目**：
-    ```bash
-    git clone https://github.com/sunboygavin/whitebox-ne.git
-    cd whitebox-ne
-    ```
-2.  **执行安装脚本**：
-    ```bash
-    sudo chmod +x install_script.sh
-    sudo ./install_script.sh
-    ```
-3.  **`install_script.sh` 执行内容**：
-    *   更新系统软件包列表。
-    *   安装 `frr`, `frr-snmp`, `snmp`, `snmpd` 等核心软件包。
-    *   修改 `/etc/frr/daemons` 文件，启用 `zebra`, `bgpd`, `ospfd`, `vrrpd` 守护进程。
-    *   修改 `/etc/frr/daemons` 文件，为 `zebra`, `bgpd`, `ospfd` 启用 SNMP 模块加载。
-    *   配置 `/etc/snmp/snmpd.conf` 启用 `master agentx`。
-    *   重启 `frr` 和 `snmpd` 服务。
-
-### 3.2. 从源码构建 (推荐用于源码定制和深度开发)
-
-此方式将从 FRR 官方源码构建，并应用本项目提供的华为风格 CLI 源码修改和自定义 SNMP 子代理。**如果您需要对 FRR 源码进行修改，或者希望使用自定义的 SNMP 子代理，请使用此方式。**
-
-1.  **克隆项目**：
-    ```bash
-    git clone https://github.com/sunboygavin/whitebox-ne.git
-    cd whitebox-ne
-    ```
-2.  **执行源码构建脚本**：
-    ```bash
-    sudo chmod +x build_from_source.sh
-    sudo ./build_from_source.sh
-    ```
-3.  **`build_from_source.sh` 执行内容**：
-    *   安装编译 FRR 所需的所有依赖。
-    *   下载 FRR 官方源码 (v8.1)。
-    *   **将 `src/frr_core/` 目录下的文件复制到 FRR 源码的相应位置，覆盖原始文件。** (例如 `src/frr_core/lib/command.c` 会覆盖 FRR 源码中的 `lib/command.c`)
-    *   编译并安装 FRR。
-    *   编译 `src/snmp_subagent/custom_subagent`。
-
-### 3.3. Docker 部署（推荐）
-
-容器化部署，环境隔离，易于管理和扩展。
+## 测试
 
 ```bash
-# 构建镜像
-./build-docker.sh
+# 全链路运行时集成测试
+sudo ./test-runtime-integration.sh
 
-# 运行容器
-./run-docker.sh
-
-# 或使用 Docker Compose
-docker-compose up -d
-```
-
-详细信息请参考 [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)。
-
-### 3.4. 应用 FRR 配置文件
-
-安装完成后，需要应用路由配置。
-
-```bash
-# 拷贝配置文件模板
-sudo cp frr.conf /etc/frr/frr.conf
-
-# 确保文件权限正确
-sudo chown frr:frr /etc/frr/frr.conf
-
-# 重启 FRR 服务以加载新配置
-sudo systemctl restart frr
+# 仅测试 Docker 环境
+sudo ./test-runtime-integration.sh --with-docker
 ```
 
 ---
 
-## ✅ 核心功能验证与使用
+## 许可证
 
-### 4.1. Web 管理界面（推荐）
-
-本项目提供了基于 Flask 的 Web 管理界面，可通过浏览器进行可视化配置和监控。
-
-**启动 Web 管理界面：**
-
-```bash
-cd src/web_management
-./start.sh
-```
-
-访问 http://localhost:8080 即可使用 Web 界面。
-
-**功能特性：**
-- 仪表盘：系统信息概览
-- 接口管理：查看网络接口状态
-- 路由管理：查看路由表
-- OSPF/BGP/VRRP 监控：实时查看协议状态
-- 配置管理：查看和保存运行配置
-- 命令行：在 Web 界面执行 vtysh 命令
-
-详细使用说明请参考 [Web 管理界面文档](src/web_management/README.md)。
-
-### 4.2. 命令行界面 (CLI) - 华为风格
-
-使用 `vtysh` 命令进入 FRR 的集成命令行界面。**通过源码级改造，`vtysh` 已原生支持华为风格关键字。**
-
-```bash
-sudo vtysh
-```
-
-**常用命令示例：**
-| 功能 | 华为风格命令 | FRR/Cisco 风格命令 |
-| :--- | :--- | :--- |
-| 进入配置模式 | `system-view` | `configure terminal` |
-| 查看所有路由协议状态 | `display current-configuration` | `show running-config` |
-| 查看 OSPF 邻居 | `display ip ospf peer` | `show ip ospf neighbor` |
-| 查看 BGP 摘要 | `display bgp peer` | `show ip bgp summary` |
-| 查看 VRRP 状态 | `display vrrp` | `show vrrp` |
-| 保存配置 | `save` | `write` |
-
-### 4.3. SNMP 管理
-
-SNMP 服务默认监听 `127.0.0.1:161`，社区字符串为 `public`。
-
-1.  **启动自定义 SNMP 子代理** (仅在从源码构建时需要)：
-    ```bash
-    cd /path/to/whitebox-ne-project/src/snmp_subagent
-    sudo ./custom_subagent &
-    ```
-2.  **验证 SNMP AgentX 是否正常工作**：
-    ```bash
-    # 应能获取到系统信息
-    snmpwalk -v2c -c public localhost .1.3.6.1.2.1.1.1.0
-    
-    # 验证 BGP MIB (OID: .1.3.6.1.2.1.15)
-    # 如果 FRR 模块加载成功，此处应能获取到 BGP 状态信息
-    snmpwalk -v2c -c public localhost .1.3.6.1.2.1.15
-    
-    # 验证自定义 MIB (仅在 custom_subagent 运行后)
-    snmpwalk -v2c -c public localhost .1.3.6.1.4.1.9999.1
-    ```
-
-### 4.4. Netconf/YANG (高级)
-
-Netconf/YANG 的集成需要手动编译 Sysrepo 和 Netopeer2。详细的编译步骤请参考项目根目录下的 `netconf_guide.md` 文件。
-
----
-
-## 💻 源码修改与开发指南
-
-本项目提供了经过改造的 FRR 核心源码示例，方便您直接查看和修改，以实现深度定制。
-
-### 5.1. 项目代码结构中的源码目录
-
-*   **`src/frr_core/`**: **此目录存放了经过我们改造的 FRR 核心源码示例。与 `frr_patch` 不同，这里是直接修改后的 C 语言文件，方便您直接查看和修改。**
-    *   `src/frr_core/lib/command.c`: 华为风格 CLI 原生支持的核心文件。
-    *   `src/frr_core/zebra/srv6.c`: SRv6 核心处理逻辑示例。
-    *   `src/frr_core/bgpd/bgp_flowspec.c`: BGP Flowspec 核心处理逻辑示例。
-*   **`src/snmp_subagent/`**: 存放自定义 SNMP 子代理的源码。您可以在此处添加自己的 MIB 扩展。
-
-### 5.2. FRR 核心源码修改详解
-
-我们提供的 `src/frr_core/` 目录下的文件是 FRR 源码中相应核心文件的一个**模拟版本**，它直接集成了华为风格的 CLI 命令以及 SRv6 和 Flowspec 的核心处理逻辑。这意味着这些修改在编译后将成为 FRR 的原生功能。
-
-**修改内容概览：**
-通过在 FRR 源码中直接修改或添加 C 语言代码，我们实现了：
-*   **华为风格 CLI 原生支持**：在 `lib/command.c` 中注册了 `system-view`, `display`, `save` 等命令。
-*   **SRv6 逻辑扩展**：在 `zebra/srv6.c` 中展示了 Locator 和 SID 的处理逻辑。
-*   **Flowspec 逻辑扩展**：在 `bgpd/bgp_flowspec.c` 中展示了 Flowspec 规则的解析和下发。
-
-**如何修改这些源码：**
-
-| 功能模块 | 对应源码文件 | 关键修改点 | 修改逻辑说明 |
-| :--- | :--- | :--- | :--- |
-| **华为风格 CLI** | `src/frr_core/lib/command.c` | `cmd_elements` 数组 | 在此数组中添加新的 `cmd_element` 结构体，注册华为风格的命令（如 `system-view`, `display`, `save`），并将其 `.func` 指向 FRR 内部的对应的处理函数（如 `cmd_configure_terminal`, `cmd_show`, `cmd_write`）。**您可以在 `cmd_show` 函数内部，根据 `args->argv` 的内容，调用 FRR 内部的 API 来获取并格式化输出您希望的华为风格 `display` 命令结果。** |
-| **SRv6 逻辑** | `src/frr_core/zebra/srv6.c` | `zebra_srv6_locator_add`, `zebra_srv6_sid_install` | `zebra_srv6_locator_add` 负责处理控制面下发的 Locator 配置，您可以在此增加对 Locator 前缀合法性的额外校验，或对接底层硬件驱动。`zebra_srv6_sid_install` 处理不同的 SRv6 Endpoint 行为，您可以在此处增加自定义的计数器或监控逻辑。 |
-| **Flowspec 逻辑** | `src/frr_core/bgpd/bgp_flowspec.c` | `bgp_fs_parse_action`, `bgp_fs_install_zebra` | `bgp_fs_parse_action` 负责解析 Flowspec 路由中的动作，您可以在此增加对私有 Flowspec 动作的解析逻辑。`bgp_fs_install_zebra` 将规则下发至 Zebra，您可以在此重定向输出，将规则发送给外部控制器（如 P4 或 OpenFlow）。 |
-
-**开发流程：**
-1.  **克隆本项目**：`git clone https://github.com/sunboygavin/whitebox-ne.git`。
-2.  **修改 `src/frr_core/` 下的源码**：直接编辑您希望修改的 C 文件。
-3.  **运行 `build_from_source.sh`**：脚本会自动将您的修改集成到 FRR 的编译过程中。
-4.  **测试**：编译并测试您的修改。
-
-### 5.3. 自定义 SNMP 子代理详解 (`src/snmp_subagent/custom_subagent.c`)
-
-这个 C 语言源文件 (`custom_subagent.c`) 是一个简单的 Net-SNMP AgentX 子代理示例。它演示了如何创建一个独立的进程，通过 AgentX 协议向主 SNMP 代理 (`snmpd`) 注册自定义的 MIB 节点，并响应 SNMP 请求。
-
-**核心功能：**
-*   **注册自定义 MIB OID**：`1.3.6.1.4.1.9999.1` (iso.org.dod.internet.private.enterprise.9999.1)。
-*   **暴露两个标量对象**：`CustomUptime` 和 `CustomFlowCount`。
-*   **`handle_custom_mib` 函数**：负责处理对这些自定义 OID 的 GET 请求，并返回模拟数据。
-
-**如何扩展：**
-*   **添加更多自定义 MIB 节点**：在 `custom_subagent.c` 中添加更多的 `netsnmp_create_handler_registration` 和 `netsnmp_register_table` 调用。
-*   **获取真实数据**：将 `handle_custom_mib` 中的模拟数据替换为从 FRR 内部 API、Linux 内核接口（如 `/proc` 或 `sysfs`）、或者其他硬件驱动中获取的真实数据。
-
----
-
-## 🧪 全量功能测试报告
-
-### 6.1. 测试拓扑与环境准备
-测试在单节点沙盒环境中进行，通过模拟接口和邻居逻辑验证协议栈处理能力。
-- **核心组件**: Zebra (转发管理), BGPD (BGP/SRv6/Flowspec), OSPFD (OSPF), VRRPD (VRRP).
-- **管理组件**: VTYSH (华为风格 CLI), Net-SNMP (AgentX).
-
-### 6.2. 控制面功能测试 (Control Plane)
-
-#### 6.2.1 OSPF 动态路由
-- **测试操作**: 在 `eth0` 接口激活 OSPF 并宣告 `192.168.10.0/24`。
-- **验证命令**: `display ip ospf interface eth0`
-- **测试结果**: **PASS**
-- **关键输出**:
-  ```text
-  eth0 is up, Internet Address 192.168.10.1/24, Area 0.0.0.0
-  Router ID 192.168.10.1, State Waiting, Priority 1
-  ```
-
-#### 6.2.2 BGP & SRv6
-- **测试操作**: 配置 BGP 邻居并定义 SRv6 Locator `2001:db8:1::/64`。
-- **验证命令**: `display bgp peer`, `display ipv6 segment-routing srv6 locator`
-- **测试结果**: **PASS (逻辑验证)**
-- **结论**: BGP 邻居进入 `Active` 状态，SRv6 Locator 逻辑在 Zebra 中已激活。
-
-#### 6.2.3 BGP Flowspec
-- **测试操作**: 配置 IPv4 Flowspec 家族并定义丢弃规则。
-- **验证命令**: `display bgp ipv4 flowspec summary`
-- **测试结果**: **PASS**
-- **结论**: 协议栈能够正确解析 Flowspec 家族配置，并准备接收/发布流量过滤规则。
-
-### 6.3. 管理面功能测试 (Management Plane)
-
-#### 6.3.1 华为风格 CLI (VRP Style)
-- **测试操作**: 使用 `system-view`, `display`, `save` 等原生命令。
-- **测试结果**: **PASS**
-- **结论**: 通过源码级补丁，`vtysh` 已原生支持华为风格关键字，操作体验与 VRP 系统一致。
-
-#### 6.3.2 SNMP AgentX 接口
-- **测试操作**: 启动 `snmpd` 并通过 `snmpwalk` 获取 BGP 状态。
-- **验证命令**: `snmpwalk -v2c -c public localhost .1.3.6.1.2.1.15`
-- **测试结果**: **PASS**
-- **结论**: FRR 成功通过 AgentX 协议连接到主代理，能够向外暴露标准 MIB 数据。
-
-### 6.4. 转发面验证 (Forwarding Plane)
-- **测试操作**: 检查内核路由表同步情况。
-- **验证命令**: `display ip routing-table` (或 `ip route show`)
-- **测试结果**: **PASS**
-- **关键输出**:
-  ```text
-  192.168.10.0/24 dev eth0 proto ospf scope link metric 20
-  ```
-
-### 6.5. 总体结论
-本白盒网元方案在 **FRRouting 8.1** 基础上，通过 **C 源码级改造** 成功实现了：
-1. **华为风格的操作体验**。
-2. **完整的控制面协议支持**（OSPF/BGP/SRv6/Flowspec）。
-3. **标准的管理接口**（SNMP/CLI）。
-
-该方案已具备部署在 x86 或白盒交换机硬件上的基础条件。
-
----
-
-## 🐛 故障排除
-
-| 问题描述 | 常见原因 | 解决方案 |
-| :--- | :--- | :--- |
-| FRR 守护进程未启动 | `/etc/frr/daemons` 配置错误 | 检查 `daemons` 文件，确保 `bgpd=yes` 等已正确设置，并重启 `frr` 服务。 |
-| `vtysh` 无法进入配置模式 | 配置文件权限错误 | 确保 `/etc/frr/frr.conf` 属于 `frr:frr` 且权限正确。 |
-| SNMP 无法获取 FRR MIB | AgentX 连接失败 | 确保 `snmpd` 和 `frr` 服务都已启动，且 `snmpd.conf` 中有 `master agentx`。 |
-| BGP/OSPF 邻居无法建立 | 接口 IP 或防火墙问题 | 检查接口 IP 配置是否正确，并确保没有防火墙规则阻挡协议端口（OSPF: 89, BGP: 179）。 |
-| SRv6/Flowspec 不工作 | 内核或 FRR 版本不支持 | 确保 Linux 内核版本支持 SRv6，且 FRR 版本在 8.0 以上。 |
-
-### Docker 相关故障
-
-| 问题描述 | 常见原因 | 解决方案 |
-| :--- | :--- | :--- |
-| 容器无法启动 | 权限不足 | 检查容器是否设置了 `--privileged` 和必要的 `--cap-add` 权限。 |
-| 网络接口不可见 | 网络模式配置错误 | 检查容器网络配置，确保使用正确的网络模式。 |
-| FRR 服务未运行 | 配置文件挂载问题 | 检查配置文件是否正确挂载到容器内。 |
-
-详细信息请参考 [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) 的故障排除部分。
-
----
-
-## 🤝 二次开发与贡献
-
-我们欢迎您对本项目进行二次开发和贡献。如果您有新的功能需求或改进建议，请遵循以下流程：
-1.  **Fork 项目**：在 GitHub 上 Fork 本项目。
-2.  **克隆本项目**：`git clone https://github.com/sunboygavin/whitebox-ne.git`。
-3.  **修改 `src/frr_core/` 下的源码**：直接编辑您希望修改的 C 文件。
-4.  **运行 `build_from_source.sh`**：脚本会自动将您的修改集成到 FRR 的编译过程中。
-5.  **更新文档**：同步更新 `README.md`，说明您的修改和新增功能。
-6.  **提交 Pull Request**：将您的修改提交到本项目的 `main` 分支。
-
----
-
-## 📄 许可证
-
-本项目采用 MIT 许可证。详细信息请参阅 LICENSE 文件。
-
----
-
-## 🔗 参考资源
-
-### 核心技术
-- [FRRouting 官方文档](https://docs.frr.org/)
-- [Net-SNMP 官方文档](http://www.net-snmp.org/)
-- [Docker 官方文档](https://docs.docker.com/)
-- [华为 VRP 命令参考](https://support.huawei.com/enterprise/)
-
-### OpenConfig 相关
-- [OpenConfig 官网](https://openconfig.net/)
-- [OpenConfig GitHub](https://github.com/openconfig)
-- [Sysrepo 文档](https://github.com/sysrepo/sysrepo)
-- [Netopeer2 文档](https://github.com/sysrepo/netopeer2)
-- [YANG 模型库](https://github.com/YangModels/yang)
-
-### 项目文档
-- [安全加固指南](SECURITY_HARDENING.md) - 生产环境安全配置
-- [功能优化路线图](OPTIMIZATION_ROADMAP.md) - 功能增强计划
-- [OpenConfig 实施报告](OPENCONFIG_IMPLEMENTATION_REPORT.md) - OpenConfig 集成详情
-
----
-
-## 🎉 部署成功！
-
-**部署成功！** 🎉
-
-如有问题，请查看日志或参考故障排除部分。
+MIT
